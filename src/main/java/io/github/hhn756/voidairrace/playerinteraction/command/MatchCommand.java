@@ -2,19 +2,21 @@ package io.github.hhn756.voidairrace.playerinteraction.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.PermissionNode;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.match.MatchCoordinator;
-import io.github.hhn756.voidairrace.infrastructure.BootstrapModule;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
 import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.AutoRegistration;
+import io.github.hhn756.voidairrace.infrastructure.modules.BootstrapStage;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
+import io.github.hhn756.voidairrace.result.OperationResult;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
@@ -29,7 +31,7 @@ import org.jspecify.annotations.NonNull;
  * 比赛管理命令
  * */
 @AutoRegistration
-public class MatchCommand implements BootstrapModule {
+public class MatchCommand implements BootstrapStage {
     public void onBootstrap(@NonNull BootstrapContext context) {
         context.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commandsEvent -> {
             LiteralCommandNode<CommandSourceStack> node = Commands.literal("match")
@@ -41,7 +43,18 @@ public class MatchCommand implements BootstrapModule {
                                 CommandSender sender = ctx.getSource().getSender();
 
                                 // 开始游戏
-                                if (!MatchCoordinator.getInstance().startMatch(null).isSuccess()) {
+                                OperationResult startResult = MatchCoordinator.getInstance().startMatch(null);
+                                if (!startResult.isSuccess()) {
+                                    // 用户消息给发送者，技术性消息进日志
+                                    Component message = startResult.message();
+                                    if (message == null) {
+                                        message = Component.translatable(TranslateKeys.Command.MATCH_CMD_START_FAILURE);
+                                    }
+                                    sender.sendMessage(message.color(NamedTextColor.RED));
+                                    String techMessage = startResult.techMessage();
+                                    if (techMessage != null) {
+                                        VoidAirRace.getInstance().getLogger().warning("开始比赛失败：" + techMessage);
+                                    }
                                     return 0;
                                 }
 
@@ -51,13 +64,18 @@ public class MatchCommand implements BootstrapModule {
                             .executes(ctx -> {
                                 CommandSender sender = ctx.getSource().getSender();
 
-                                MatchCoordinator.StopResult stopResult = MatchCoordinator.getInstance().stopMatch();
+                                OperationResult stopResult = MatchCoordinator.getInstance().stopMatch();
                                 if (!stopResult.isSuccess()) {
-                                    Component message = stopResult.getDisplayMessage();
+                                    // 用户消息给发送者，技术性消息进日志
+                                    Component message = stopResult.message();
                                     if (message == null) message = Component.translatable(
                                             TranslateKeys.Command.MATCH_CMD_STOP_FAILURE
                                     );
                                     sender.sendMessage(message.color(NamedTextColor.RED));
+                                    String techMessage = stopResult.techMessage();
+                                    if (techMessage != null) {
+                                        VoidAirRace.getInstance().getLogger().warning("结束比赛失败：" + techMessage);
+                                    }
                                     return 1;
                                 }
 

@@ -5,26 +5,21 @@ import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
+import io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder.BlockFinder;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class MapInitializer {
+public class MapInitializer implements Module {
     private static MapInitializer instance;
-
-    static void load() {
-        instance = new MapInitializer();
-    }
-
-    static void unload() {
-        instance = null;
-    }
 
     public static MapInitializer getInstance() throws NullPointerException {
         if (instance == null) throw new NullPointerException("地图初始化器实例不存在");
@@ -33,14 +28,38 @@ public class MapInitializer {
 
     // ------
 
-    private final VoidAirRace mainClass;
-    private final YamlConfig flagConfig;
-    private final Logger logger;
+    private VoidAirRace mainClass;
+    private YamlConfig flagConfig;
+    private Logger logger;
 
-    private MapInitializer() {
+    private MapInitializer() {}
+
+    @Override
+    public Collection<Class<? extends Module>> getRequiredModules() {
+        // BlockFinder 虽无直接引用，但地图初始化流程（initAllMapsAsync 触发的各地图 initAsync）会用到
+        return List.of(Config.class, Registry.class, SchedulingUtil.class, BlockFinder.class);
+    }
+
+    /**
+     * 插件启用时执行<br>
+     * 依赖解析等有副作用的工作必须在此完成：Modules 会先实例化全部模块，再按拓扑顺序加载
+     * */
+    private void onLoad() {
         flagConfig = Config.getInstance().getYmlConfig(PublicFiles.FLAGS);
-        this.mainClass = VoidAirRace.getInstance();
+        mainClass = VoidAirRace.getInstance();
         logger = mainClass.getLogger();
+
+        instance = this;
+
+        // 定义“游戏地图”类别，键计算：注册项元数据中的地图id
+        Registry.getInstance().createCategory(Categories.MAP, MapEntry::getKey);
+        // 初始化所有地图
+        initAllMapsAsync();
+    }
+
+    /** 插件停用时执行 */
+    private void onUnload() {
+        instance = null;
     }
 
     /**

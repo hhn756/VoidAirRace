@@ -5,8 +5,8 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.github.hhn756.voidairrace.constants.PermissionNode;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerInitializer;
-import io.github.hhn756.voidairrace.infrastructure.BootstrapModule;
 import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.AutoRegistration;
+import io.github.hhn756.voidairrace.infrastructure.modules.BootstrapStage;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
@@ -22,7 +22,7 @@ import org.jspecify.annotations.NonNull;
  * 玩家管理命令
  * */
 @AutoRegistration
-public class PlayerManagerCommand implements BootstrapModule {
+public class PlayerManagerCommand implements BootstrapStage {
     public void onBootstrap(@NonNull BootstrapContext context) {
         context.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commandsEvent -> {
             LiteralCommandNode<CommandSourceStack> node = Commands.literal("player_manager")

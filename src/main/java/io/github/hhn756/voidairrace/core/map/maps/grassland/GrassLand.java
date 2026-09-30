@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.map.maps.grassland;
 
-import io.github.hhn756.voidairrace.constants.Categories;
+import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
@@ -14,10 +14,11 @@ import io.github.hhn756.voidairrace.core.matchrule.RuleComp;
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
 import io.github.hhn756.voidairrace.exception.ArenaException;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.BlockRegion;
 import io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder.BlockFinder;
+import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
 import io.github.hhn756.voidairrace.service.arena.ArenaToken;
 import io.papermc.paper.event.player.PlayerFailMoveEvent;
@@ -73,22 +74,21 @@ public class GrassLand extends PlayableGameMap implements Listener {
     }
 
     @Override
-    public @NonNull StartResult start(@NonNull Match match) {
+    public @NonNull OperationResult start(@NonNull Match match) {
         this.match = match;
 
-        // 加载竞技场
-        ArenaManager.BorrowArenaResult borrowResult = ArenaManager.getInstance().borrow();
-        ArenaToken arena = borrowResult.getValue();
-        if (!borrowResult.isSuccess() || arena == null) return StartResult.failure(
-                borrowResult.getDisplayMessage() == null
-                        ? Component.translatable(TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_UNKNOWN_CAUSE)
-                        : Component.translatable(TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_SPECIFIED_CAUSE)
-                          .arguments(borrowResult.getDisplayMessage())
-        );
+        // 加载竞技场；借用失败时把借用模块给出的原因挂到“草地地图开始失败”键对上
+        ValueResult<ArenaToken> borrowResult = ArenaManager.getInstance().borrow();
+        if (!(borrowResult instanceof ValueResult.WithValue(var arenaToken))) {
+            return borrowResult.expectValue(
+                    TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_SPECIFIED_CAUSE,
+                    TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_UNKNOWN_CAUSE
+            );
+        }
 
-        this.arena = arena;
+        this.arena = arenaToken;
         arena.loadArena(resourcePath("arena"));
-        match.getComp(ScopeComp.class).widen(
+        match.comp(ScopeComp.class).widen(
                 new MatchArea(arena, AreaTags.MAIN)
         );
 
@@ -96,18 +96,18 @@ public class GrassLand extends PlayableGameMap implements Listener {
         enableRules(match);
         deliverSupplies();
 
-        return StartResult.success();
+        return OperationResult.success();
     }
 
     private void playerEntryArena(Match match) {
         TeamRoster teamRoster = TeamRoster.getInstance();
 
         // 遍历参赛者列表让他们加入比赛（参赛者组件有配置对象，结果不会为 null）
-        for (Player player : match.getConfigData(ContestantComp.CONFIG_KEY).initialContestants()) {
+        for (Player player : match.configOf(ContestantComp.CONFIG_KEY).initialContestants()) {
             Team playerTeam = teamRoster.getTeam(player);
             if (playerTeam != null) {
                 Location loc = Const.TEAM_TO_SPAWN_LOCATION.get(playerTeam);
-                loc.setWorld(arena.getWorld().getValue());
+                loc.setWorld(arena.getWorld().value());
                 player.teleport(loc);
             }
         }
@@ -130,7 +130,7 @@ public class GrassLand extends PlayableGameMap implements Listener {
 
         for (Location loc : supplies) {
             // 文件仅记录箱子位置，每局游戏都可能使用不同竞技场（不同世界）
-            loc.setWorld(arena.getWorld().getValue());
+            loc.setWorld(arena.getWorld().value());
 
             Block block = loc.getBlock();
             if (block.getState() instanceof Chest chest) {
@@ -142,21 +142,31 @@ public class GrassLand extends PlayableGameMap implements Listener {
     }
 
     /**
-     * 启用一些规则
+     * 启用一些规则<br>
+     * 规则启用失败时把原因挂到“草地地图开始失败”键对上并广播
      */
     private void enableRules(Match match) {
-        RuleComp ruleComp = match.getComp(RuleComp.class);
-        var ruleSubtable = Registry.getInstance().category(Categories.RULE);
+        RuleComp ruleComp = match.comp(RuleComp.class);
 
         for (NamespacedKey ruleId : Const.USE_RULES) {
-            RuleComp.ManagerEnableRuleResult enableRuleResult = ruleComp.enableRule(ruleId);
-            Component displayMessage = enableRuleResult.getDisplayMessage();
+            OperationResult enableRuleResult = ruleComp.enableRule(ruleId);
             if (!enableRuleResult.isSuccess()) {
-                Component message = (displayMessage == null
-                        ? Component.translatable(TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_UNKNOWN_CAUSE)
-                        : Component.translatable(TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_SPECIFIED_CAUSE)
-                          .arguments(displayMessage));
-                Bukkit.getServer().broadcast(message.color(NamedTextColor.RED));
+                // 用户消息广播给玩家
+                Component message = enableRuleResult
+                        .causedBy(
+                                TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_SPECIFIED_CAUSE,
+                                TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_UNKNOWN_CAUSE
+                        )
+                        .message();
+                if (message != null) {
+                    Bukkit.getServer().broadcast(message.color(NamedTextColor.RED));
+                }
+                // 技术性消息只进日志
+                String techMessage = enableRuleResult.techMessage();
+                if (techMessage != null) {
+                    VoidAirRace.getInstance().getLogger()
+                            .warning("草地地图启用规则 " + ruleId + " 失败：" + techMessage);
+                }
             }
         }
     }
@@ -169,7 +179,7 @@ public class GrassLand extends PlayableGameMap implements Listener {
     @EventHandler
     public void onPlayerFailMove(PlayerFailMoveEvent event) {
         if (event.getPlayer().getLocation().getWorld()
-                .equals(arena.getWorld().getValue())) {
+                .equals(arena.getWorld().value())) {
             event.setLogWarning(false);
         }
     }
@@ -184,26 +194,27 @@ public class GrassLand extends PlayableGameMap implements Listener {
      */
     private CompletableFuture<?> findSupplyBoxes() {
         // 申请临时竞技场
-        ArenaManager.BorrowArenaResult borrowResult = ArenaManager.getInstance().borrow();
-        ArenaToken tempArena = borrowResult.getValue();
-        if (!borrowResult.isSuccess() || tempArena == null) {
+        ValueResult<ArenaToken> borrowResult = ArenaManager.getInstance().borrow();
+        if (!(borrowResult instanceof ValueResult.WithValue(var tempArena))) {
             return CompletableFuture.failedFuture(
                     new NullPointerException("未申请到临时竞技场，无法初始化")
             );
         }
 
-        ArenaManager.LoadArenaResult loadArenaResult = tempArena.loadArena(resourcePath("arena"));
+        OperationResult loadArenaResult = tempArena.loadArena(resourcePath("arena"));
         if (!loadArenaResult.isSuccess()) {
+            // 异常的 message 是技术性通道：记录结果的技术性消息；用户消息由翻译键给出
+            String techMessage = loadArenaResult.techMessage();
             return CompletableFuture.failedFuture(
                     new ArenaException(
-                            "加载竞技场失败：" + loadArenaResult.getDisplayMessage(),
+                            "加载竞技场失败" + (techMessage == null ? "" : "：" + techMessage),
                             Component.translatable(TranslateKeys.Map.GRASS_LAND_FIND_SUPPLY_BOXES_LOAD_ARENA_FAILURE)
                     )
             );
         }
 
         // 为每个区域创建异步扫描任务
-        World world = tempArena.getWorld().getValue();
+        World world = tempArena.getWorld().value();
         if (world == null) {
             tempArena.returnArena();
             return CompletableFuture.failedFuture(
@@ -248,12 +259,12 @@ public class GrassLand extends PlayableGameMap implements Listener {
         Player player = event.getPlayer();
         Location playerLoc = player.getLocation();
         if (!playerLoc.getWorld().equals( // 检查玩家是否在竞技场上
-                arena.getWorld().getValue()
+                arena.getWorld().value()
         )) return;
 
         // 到达终点后胜利
         if (playerLoc.z() >= 499.0d) {
-            match.getComp(ContestantComp.class).leaveMatch(player);
+            match.comp(ContestantComp.class).leaveMatch(player);
         }
     }
 

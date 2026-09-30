@@ -33,11 +33,11 @@ public class MatchMessage implements Listener {
         );
         server.broadcast(
                 Component.translatable(TranslateKeys.AudioVisualServices.MATCH_MESSAGE_MATCH_STARTED_LINE2)
-                        .arguments(match.getConfigData(MapComp.CONFIG_KEY).map().getElementMeta().mainName())
+                        .arguments(match.configOf(MapComp.CONFIG_KEY).map().getElementMeta().mainName())
         );
         server.broadcast(
                 Component.translatable(TranslateKeys.AudioVisualServices.MATCH_MESSAGE_MATCH_STARTED_LINE3)
-                        .arguments(Component.text(match.getConfigData(GameTimeComp.CONFIG_KEY).duration() / 20d))
+                        .arguments(Component.text(match.configOf(GameTimeComp.CONFIG_KEY).duration() / 20d))
         );
         server.broadcast(
                 Component.translatable(TranslateKeys.AudioVisualServices.MATCH_MESSAGE_MATCH_STARTED_LINE4)
@@ -49,7 +49,7 @@ public class MatchMessage implements Listener {
                 1.0f,
                 1.0f
         );
-        event.getMatch().getConfigData(ContestantComp.CONFIG_KEY)
+        event.getMatch().configOf(ContestantComp.CONFIG_KEY)
                 .initialContestants().forEach(contestant -> contestant.playSound(sound));
     }
 
@@ -69,7 +69,7 @@ public class MatchMessage implements Listener {
                 1.0f
         );
         event.getMatch()
-                .getConfigData(ContestantComp.CONFIG_KEY)
+                .configOf(ContestantComp.CONFIG_KEY)
                 .initialContestants()
                 .forEach(
                         contestant -> contestant.playSound(sound)

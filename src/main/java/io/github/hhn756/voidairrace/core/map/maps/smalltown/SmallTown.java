@@ -5,6 +5,7 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.core.map.PlayableGameMap;
 import io.github.hhn756.voidairrace.core.match.Match;
+import io.github.hhn756.voidairrace.result.OperationResult;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -37,15 +38,15 @@ public class SmallTown extends PlayableGameMap {
     }
 
     @Override
-    public PlayableGameMap.@NonNull StartResult start(@NonNull Match match) {
+    public @NonNull OperationResult start(@NonNull Match match) {
         Bukkit.getServer().broadcast(Component.text("[debug] 已使用 小镇 开始比赛"));
-        return StartResult.success();
+        return OperationResult.success();
     }
 
     @Override
-    public @NonNull OverResult over(@NonNull Match match) {
+    public @NonNull OperationResult over(@NonNull Match match) {
         Bukkit.getServer().broadcast(Component.text("[debug] 已使用 小镇 结束比赛"));
-        return OverResult.success();
+        return OperationResult.success();
     }
 
     @Override

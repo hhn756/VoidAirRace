@@ -9,33 +9,60 @@ import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GlobalSettingKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.util.JarEntryUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.WorldCreatorUtil;
-import io.github.hhn756.voidairrace.result.base.OperationResult;
-import io.github.hhn756.voidairrace.result.base.ValueResult;
-import net.kyori.adventure.text.Component;
+import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * 管理多个竞技场的加载/卸载，每个竞技场用数字 ID 标识（{@code 1} ~ {@code maxArenas}）
  */
-public class ArenaManager {
+public class ArenaManager implements Module {
     private static ArenaManager instance;
 
-    static void load() {
-        instance = new ArenaManager();
+    @Override
+    public Collection<Class<? extends Module>> getRequiredModules() {
+        return List.of(Config.class);
     }
 
-    static void unload() {
+    /**
+     * 插件启用时执行<br>
+     * 读取配置等有副作用的工作必须在此完成：Modules 会先实例化全部模块，再按拓扑顺序加载
+     * */
+    private void onLoad() {
+        VoidAirRace mainClass = VoidAirRace.getInstance();
+
+        // 读取最大竞技场数量，若配置项不存在或无效则使用默认值
+        YamlConfig gameSettings = Config.getInstance().getYmlConfig(PublicFiles.GAME_SETTINGS);
+        this.maxArenas = gameSettings.get(GameSettingKeys.MAX_ARENAS, 16);
+        if (maxArenas < 1) {
+            mainClass.getLogger().warning("配置中的最大竞技场数量小于 1，已强制改为 1");
+            maxArenas = 1;
+        }
+
+        // 初始化
+        for (Integer id = 1; id <= maxArenas; id++) {
+            arenaStates.put(id, new ArenaState());
+        }
+        freeCount = maxArenas;
+
+        instance = this;
+    }
+
+    /** 插件停用时执行 */
+    private void onUnload() {
         instance = null;
     }
 
@@ -74,33 +101,18 @@ public class ArenaManager {
      * */
     private Integer freeCount;
 
-    private ArenaManager() {
-        VoidAirRace mainClass = VoidAirRace.getInstance();
-
-        // 读取最大竞技场数量，若配置项不存在或无效则使用默认值
-        YamlConfig gameSettings = Config.getInstance().getYmlConfig(PublicFiles.GAME_SETTINGS);
-        this.maxArenas = gameSettings.get(GameSettingKeys.MAX_ARENAS, 16);
-        if (maxArenas < 1) {
-            mainClass.getLogger().warning("配置中的最大竞技场数量小于 1，已强制改为 1");
-            maxArenas = 1;
-        }
-
-        // 初始化
-        for (Integer id = 1; id <= maxArenas; id++) {
-            arenaStates.put(id, new ArenaState());
-        }
-        freeCount = maxArenas;
-    }
+    private ArenaManager() {}
 
     // ------ 借用竞技场世界 ------
 
     /**
      * 借用一个竞技场世界
      * */
-    public @NonNull BorrowArenaResult borrow() {
+    public @NonNull ValueResult<ArenaToken> borrow() {
         Integer freeArenaId = getFreeArena();
-        if (freeArenaId == -1) return BorrowArenaResult.failure(
-                Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_NO_FREE_ARENA)
+        if (freeArenaId == -1) return ValueResult.failure(
+                TranslateKeys.Arena.ARENA_MANAGER_NO_FREE_ARENA,
+                "无空闲竞技场（共 " + maxArenas + " 个）"
         );
 
         // 更新状态
@@ -110,7 +122,7 @@ public class ArenaManager {
         arenaState.setActiveTokenUid(tokenUid);
         freeCount--;
 
-        return BorrowArenaResult.success(
+        return ValueResult.success(
                 new ArenaToken(freeArenaId, tokenUid)
         );
     }
@@ -122,9 +134,10 @@ public class ArenaManager {
      *
      * @return 如果成功归还将返回成功的结果，如果借据无效则返回失败的结果
      * */
-    public @NonNull ReturnArenaResult returnArena(@NonNull ArenaToken token) {
-        if (!validateToken(token)) return ReturnArenaResult.failure(
-                Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID)
+    public @NonNull OperationResult returnArena(@NonNull ArenaToken token) {
+        if (!validateToken(token)) return OperationResult.failure(
+                TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
+                tokenInvalidTechDetail(token)
         );
 
         // 卸载世界
@@ -136,7 +149,7 @@ public class ArenaManager {
         arenaState.setActiveTokenUid(null);
         freeCount++;
 
-        return ReturnArenaResult.success();
+        return OperationResult.success();
     }
 
     // ------ 对竞技场的操作 ------
@@ -147,19 +160,20 @@ public class ArenaManager {
      * @param token 此借据都应的竞技场世界将要承载竞技场数据
      * @param arenaPath 要加载的竞技场世界数据路径（{@code resource/<arenaPath>/}）
      * */
-    public @NonNull LoadArenaResult loadArena(ArenaToken token, String arenaPath) {
-        if (!validateToken(token)) return LoadArenaResult.failure(
-                Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID)
+    public @NonNull OperationResult loadArena(ArenaToken token, String arenaPath) {
+        if (!validateToken(token)) return OperationResult.failure(
+                TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
+                tokenInvalidTechDetail(token)
         );
 
         try {
             loadArena(token.getArenaId(), arenaPath);
         } catch (IOException e) {
-            return LoadArenaResult.failure(
-                    Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_IO_EXCEPTION)
+            return OperationResult.failure(
+                    TranslateKeys.Arena.ARENA_MANAGER_IO_EXCEPTION, null, null, e
             );
         }
-        return LoadArenaResult.success();
+        return OperationResult.success();
     }
 
     /**
@@ -169,44 +183,46 @@ public class ArenaManager {
      *
      * @see ArenaException
      * */
-    public @NonNull LoadArenaResult loadArenaWorld(ArenaToken token) {
-        if (!validateToken(token)) return LoadArenaResult.failure(
-                Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID)
+    public @NonNull OperationResult loadArenaWorld(ArenaToken token) {
+        if (!validateToken(token)) return OperationResult.failure(
+                TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
+                tokenInvalidTechDetail(token)
         );
 
         try {
             loadArenaWorld(token.getArenaId());
         } catch (ArenaException e) {
-            return LoadArenaResult.failure(
-                    Component.translatable("")
-            );
+            // 无可上报原因的翻译键：用户消息取异常携带的用户文案，技术性消息取异常文本，兜底文案交给最外层
+            return OperationResult.failure(null, e.getUserMessage(), e.getMessage(), e);
         }
-        return LoadArenaResult.success();
+        return OperationResult.success();
     }
 
     /**
      * 卸载竞技场世界（不保存内存中的修改）
      * */
-    public @NonNull UnloadArenaWorldResult unloadArenaWorld(ArenaToken token) {
-        if (!validateToken(token)) return UnloadArenaWorldResult.failure(
-                Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID)
+    public @NonNull OperationResult unloadArenaWorld(ArenaToken token) {
+        if (!validateToken(token)) return OperationResult.failure(
+                TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
+                tokenInvalidTechDetail(token)
         );
 
         unloadArenaWorld(token.getArenaId());
-        return UnloadArenaWorldResult.success();
+        return OperationResult.success();
     }
 
     /**
      * 获取借据对应的竞技场世界<br>
      * 如果世界未加载，那么会自动加载它
      * */
-    public @NonNull GetTokenWorldResult getTokenWorld(@NonNull ArenaToken token) {
-        if (!validateToken(token)) return GetTokenWorldResult.failure(
-                Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID)
+    public @NonNull ValueResult<World> getTokenWorld(@NonNull ArenaToken token) {
+        if (!validateToken(token)) return ValueResult.failure(
+                TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
+                tokenInvalidTechDetail(token)
         );
 
         loadArenaWorld(token.getArenaId());
-        return GetTokenWorldResult.success(
+        return ValueResult.success(
                 arenaState(token.getArenaId()).getLoadedWorld()
         );
     }
@@ -357,88 +373,13 @@ public class ArenaManager {
         return token.getUid().equals(activeTokenUid);
     }
 
-    // ------ 结果类型 ------
-
-    public static class BorrowArenaResult extends ValueResult<ArenaToken> {
-        public BorrowArenaResult(boolean success, @Nullable ArenaToken value, @Nullable Component displayMessage) {
-            super(success, displayMessage, value);
-        }
-
-        public static BorrowArenaResult success(ArenaToken token) {
-            return new BorrowArenaResult(true, token, null);
-        }
-
-        public static BorrowArenaResult failure(Component displayMessage) {
-            return new BorrowArenaResult(false, null, displayMessage);
-        }
-    }
-
-    public static class GetTokenWorldResult extends ValueResult<World> {
-        public GetTokenWorldResult(boolean success, @Nullable World value, @Nullable Component displayMessage) {
-            super(success, displayMessage, value);
-        }
-        public static GetTokenWorldResult success(World world) {
-            return new GetTokenWorldResult(true, world, null);
-        }
-
-        public static GetTokenWorldResult failure(Component displayMessage) {
-            return new GetTokenWorldResult(false, null, displayMessage);
-        }
-    }
-
-    public static class LoadArenaResult extends OperationResult {
-        public LoadArenaResult(boolean success, @org.jetbrains.annotations.Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static LoadArenaResult success() {
-            return new LoadArenaResult(true, null);
-        }
-
-        public static LoadArenaResult failure(Component displayMessage) {
-            return new LoadArenaResult(false, displayMessage);
-        }
-    }
-
-    public static class LoadArenaWorldResult extends OperationResult {
-        public LoadArenaWorldResult(boolean success, @org.jetbrains.annotations.Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static LoadArenaWorldResult success() {
-            return new LoadArenaWorldResult(true, null);
-        }
-
-        public static LoadArenaWorldResult failure(Component displayMessage) {
-            return new LoadArenaWorldResult(false, displayMessage);
-        }
-    }
-
-    public static class ReturnArenaResult extends OperationResult {
-        public ReturnArenaResult(boolean success, @org.jetbrains.annotations.Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static ReturnArenaResult success() {
-            return new ReturnArenaResult(true, null);
-        }
-
-        public static ReturnArenaResult failure(Component displayMessage) {
-            return new ReturnArenaResult(false, displayMessage);
-        }
-    }
-
-    public static class UnloadArenaWorldResult extends OperationResult {
-        public UnloadArenaWorldResult(boolean success, @org.jetbrains.annotations.Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static UnloadArenaWorldResult success() {
-            return new UnloadArenaWorldResult(true, null);
-        }
-
-        public static UnloadArenaWorldResult failure(Component displayMessage) {
-            return new UnloadArenaWorldResult(false, displayMessage);
-        }
+    /**
+     * @return “借据无效”失败结果的技术性消息，记录借据指认的竞技场 id、借据 uid 与当前生效的 uid
+     *         （服务端参数，禁止显示给玩家）
+     * */
+    private @NonNull String tokenInvalidTechDetail(@NonNull ArenaToken token) {
+        return "借据无效：arenaId=" + token.getArenaId()
+                + ", 借据uid=" + token.getUid()
+                + ", 生效uid=" + arenaState(token.getArenaId()).getActiveTokenUid();
     }
 }

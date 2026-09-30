@@ -2,7 +2,7 @@ package io.github.hhn756.voidairrace.service.datapackregistrar;
 
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.ResourcePath;
-import io.github.hhn756.voidairrace.infrastructure.BootstrapModule;
+import io.github.hhn756.voidairrace.infrastructure.modules.BootstrapStage;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.text.Component;
@@ -15,7 +15,7 @@ import java.net.URISyntaxException;
 /**
  * 在 bootstrap 阶段将插件中指定名称的目录作为数据包注册到服务器
  * */
-public class DataPackRegistrar implements BootstrapModule {
+public class DataPackRegistrar implements BootstrapStage {
     @Override
     public void onBootstrap(@NonNull BootstrapContext context) {
         // 注册数据包

@@ -10,39 +10,47 @@ import io.github.hhn756.voidairrace.infrastructure.config.ConfigDefinition;
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigKey;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
-import io.github.hhn756.voidairrace.result.base.OperationResult;
-import io.github.hhn756.voidairrace.result.base.ValueResult;
+import io.github.hhn756.voidairrace.infrastructure.util.TypeReference;
+import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
-import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
  * 代表一局正在进行或已安排的比赛<br>
  * 包含比赛的配置、所用的组件等数据
+ *
+ *
  */
 public class Match {
     /** 标记此赛实例是否已进行过游戏，防止复用实例 */
     private boolean used = false;
 
     /** 比赛状态 */
-    private MatchState state = MatchState.SCHEDULED;
+    private @NonNull MatchState state = MatchState.SCHEDULED;
 
     /** 比赛所用的配置 */
-    private final MatchConfig config;
+    private final @NonNull MatchConfig config;
 
-    /** 比赛记录 */
-    private static final ConfigDefinition recordFile = new ConfigDefinition(
+    /** 比赛记录文件定义 */
+    private static final @NonNull ConfigDefinition<YamlConfig> recordFile = new ConfigDefinition<>(
             PublicFiles.TEMP_DIR + "match_record",
-            new ConfigKey<?>[0]
+            new ConfigKey<?>[0],
+            new TypeReference<>(){}
     );
+    /** 比赛记录文件实例 */
     private YamlConfig recordInst;
 
     /**
@@ -59,14 +67,14 @@ public class Match {
      *
      * @param config 指定新比赛所用配置
      */
-    public static CreateMatchResult create(@NonNull MatchConfig config) {
+    public static @NonNull ValueResult<Match> create(@NonNull MatchConfig config) {
         // 防止重复使用配置实例
-        if (config.isUsed()) return CreateMatchResult.failure(
-                Component.translatable(TranslateKeys.Match.CREATE_CONFIG_IS_USED)
+        if (config.isUsed()) return ValueResult.failure(
+                TranslateKeys.Match.CREATE_CONFIG_IS_USED
         );
         config.use();
 
-        return CreateMatchResult.success(new Match(config));
+        return ValueResult.success(new Match(config));
     }
 
     // ---------- 开始比赛 ----------
@@ -75,36 +83,52 @@ public class Match {
      * 使比赛开始
      *
      * @param args 传递给所有组件的参数。组件收到的参数可以为{@code null}（即传入列表不包含对应组件的参数）<br>
-     *             此方法会将每个参数对象传递给其{@link CustomData#getSource()}返回类型的组件
+     *             此方法会将每个参数对象传递给其{@link CustomData#source()}返回类型的组件
+     *
+     * @return 开始结果。失败时携带前置校验失败原因或组件安装失败的原因（含组件给出的文案与安装异常）
      * */
-    public @NonNull StartResult start(@Nullable CustomData... args) {
-        // 如果比赛已开始
-        if (state != MatchState.SCHEDULED) return StartResult.failure(
-                Component.translatable(TranslateKeys.Match.START_INVALID_STATE));
-        // 如果比赛实例已使用过
-        if (used) return StartResult.failure(
-                Component.translatable(TranslateKeys.Match.START_INSTANCE_IS_USED));
+    public @NonNull OperationResult start(@Nullable CustomData... args) {
+        // 防止重复开始一局比赛
+        if (state != MatchState.SCHEDULED) return OperationResult.failure(
+                TranslateKeys.Match.START_INVALID_STATE);
+        // 防止复用比赛实例
+        if (used) return OperationResult.failure(
+                TranslateKeys.Match.START_INSTANCE_IS_USED);
 
         // 标记使用
         used = true;
 
         // 更新状态
-        state = MatchState.IN_PROGRESS;
+        state = MatchState.STARTING;
 
         // 创建记录
         createRecord();
 
         // 安装组件
-        InstallComponentsResult installComponentsResult = installComponents(args);
-        if (!installComponentsResult.isSuccess()) {
-            return StartResult.failure(
-                    installComponentsResult.getDisplayMessage() // 安装组件方法失败时必返回消息
+        ValueResult<Map<DataKey<?>, CustomData>> installComponentsResult = installComponents(args);
+        if (installComponentsResult
+                instanceof ValueResult.Failed(var key, var userDetail, var techDetail, var cause)) {
+            // 安装结果里的失败信息已是最终形式（含 START_INSTALL_FAILED 键），原样转为无值结果
+            return new OperationResult.Failed(key, userDetail, techDetail, cause);
+        }
+        if (!(installComponentsResult instanceof ValueResult.WithValue(var startContext))) {
+            // installComponents 成功必须产出上下文映射，走到这里属于实现错误
+            return new OperationResult.Failed(
+                    TranslateKeys.Match.START_INSTALL_FAILED,
+                    null,
+                    "installComponents成功但未产出开始上下文映射",
+                    new IllegalStateException("installComponents成功但未产出开始上下文映射")
             );
         }
-        Map<DataKey<?>, CustomData> startContext = installComponentsResult.getValue();
 
+        // 更新状态
+        state = MatchState.IN_PROGRESS;
+
+        // 通知其他模块
         new MatchStartedEvent(this, startContext).callEvent();
-        return StartResult.success();
+
+        // 告知调用者开始成功
+        return OperationResult.success();
     }
 
     /**
@@ -118,16 +142,19 @@ public class Match {
      * 内部方法，开始比赛流程的一部分。用于安装比赛组件
      *
      * @param args 传递给各组件的开始参数
+     *
+     * @return 成功时携带开始上下文映射（可以为空映射）；任一组件安装失败时携带失败原因
      * */
-    InstallComponentsResult installComponents(@Nullable CustomData... args) {
+    @NonNull ValueResult<Map<DataKey<?>, CustomData>> installComponents(@Nullable CustomData... args) {
         // 开始上下文
         Map<DataKey<?>, CustomData> startContext = new HashMap<>();
         // 参数映射
         HashMap<Class<? extends MatchComp>, CustomData> argMap = new HashMap<>();
         if (args != null) {
+            // 记录所有非null的参数值到 argMap
             for (CustomData arg : args) {
-                if (arg != null) { // 过滤 null 参数
-                    argMap.put(arg.getSource(), arg);
+                if (arg != null) {
+                    argMap.put(arg.source(), arg);
                 }
             }
         }
@@ -143,16 +170,47 @@ public class Match {
         List<StartableComp<?, ?>> installed = new ArrayList<>();
         for (StartableComp<?, ?> component : sortedComponents) {
             CustomData arg = argMap.get(component.getClass());
-            boolean success = installComponentSafely(component, arg, installed, startContext);
-            if (!success) {
+            InstallAttempt attempt = installComponentSafely(component, arg, installed, startContext);
+            if (!attempt.success()) {
                 // 安装失败后逆安装顺序卸载已安装的组件
                 rollback(installed, this);
-                return InstallComponentsResult.failure(
-                        Component.translatable(TranslateKeys.Match.START_INSTALL_FAILED));
+                return ValueResult.failure(
+                        TranslateKeys.Match.START_INSTALL_FAILED,
+                        attempt.message(),  // 组件失败结果自带的用户文案，可能为null
+                        attempt.techMessage(), // 组件失败结果自带的技术性消息，可能为null
+                        attempt.cause()     // 安装抛出的异常，可能为null
+                );
             }
         }
 
-        return InstallComponentsResult.success(startContext);
+        return ValueResult.success(startContext);
+    }
+
+    /**
+     * 单次组件安装尝试的结果（类内部使用），把失败信息传递给{@link Match#installComponents(CustomData...)}
+     *
+     * @param success 本次安装是否成功
+     * @param result  组件{@link StartableComp#install(Match, CustomData)}返回的结果（其抛出异常时为{@code null}）
+     * @param cause   安装抛出的异常（未抛出时为{@code null}）
+     * */
+    private record InstallAttempt(
+            boolean success,
+            @Nullable ValueResult<? extends CustomData> result,
+            @Nullable Exception cause
+    ) {
+        /**
+         * @return 组件失败结果自带的用户文案；无结果或无文案时为{@code null}
+         * */
+        private @Nullable Component message() {
+            return result == null ? null : result.message();
+        }
+
+        /**
+         * @return 组件失败结果自带的技术性消息（仅日志）；无结果或无消息时为{@code null}
+         * */
+        private @Nullable String techMessage() {
+            return result == null ? null : result.techMessage();
+        }
     }
 
     /**
@@ -160,21 +218,19 @@ public class Match {
      *
      * @param startable 要安装的组件
      *
-     * @return 组件是否安装成功
+     * @return 本次安装尝试的结果（成功与否与失败信息）
      * */
-    @SuppressWarnings("unchecked")
-    private boolean installComponentSafely(
-            StartableComp<?, ?> startable,
-            CustomData arg,
-            List<StartableComp<?, ?>> installed,
-            Map<DataKey<?>, CustomData> startContext) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private @NonNull InstallAttempt installComponentSafely(
+            @NonNull StartableComp<?, ?> startable,
+            @NonNull CustomData arg,
+            @NonNull List<@NonNull StartableComp<?, ?>> installed,
+            @NonNull Map<@NonNull DataKey<?>, @NonNull CustomData> startContext) {
 
-        StartableComp.InstallResult<?> result = null;
+        ValueResult<? extends CustomData> result = null;
         Exception thrownException = null;
         try {
-            @SuppressWarnings({"rawtypes", "unchecked"})
-            StartableComp.InstallResult<?> tmp = ((StartableComp) startable).install(this, arg);
-            result = tmp;
+            result = ((StartableComp) startable).install(this, arg);
         } catch (Exception e) {
             thrownException = e;
         }
@@ -184,16 +240,16 @@ public class Match {
         if (failed) {
             // 安装失败，回滚并传递失败原因或错误信息
             rollbackOne(startable, arg, result, thrownException);
-            return false;
+            return new InstallAttempt(false, result, thrownException);
         }
 
         // 安装成功
         installed.add(startable);
-        CustomData ctx = result.getStartContext();
-        if (ctx != null) {
+        if (result instanceof ValueResult.WithValue(var ctx)) {
+            // 组件产出了开始上下文
             startContext.put(startable.getSCK(), ctx);
         }
-        return true;
+        return new InstallAttempt(true, result, null);
     }
 
     /**
@@ -201,14 +257,14 @@ public class Match {
      * */
     @SuppressWarnings("unchecked")
     private <SA extends CustomData, SC extends CustomData>void rollbackOne(
-            StartableComp<SA, SC> startable,
-            CustomData installArg,
-            StartableComp.InstallResult<?> installResult,
-            Exception exceptionOfInstall) {
+            @NonNull StartableComp<@NonNull SA, @NonNull SC> startable,
+            @NonNull CustomData installArg,
+            @Nullable ValueResult<? extends CustomData> installResult,
+            @Nullable Exception exceptionOfInstall) {
         startable.rollback(
                 this,
                 (SA) installArg,
-                (StartableComp.InstallResult<SC>) installResult,
+                (ValueResult<SC>) installResult,
                 exceptionOfInstall
         );
     }
@@ -216,7 +272,7 @@ public class Match {
     /**
      * 内部方法，用于在开始游戏加载组件失败后逆向卸载已安装的组件
      * */
-    private void rollback(List<StartableComp<?, ?>> installed, Match match) {
+    private void rollback(@NonNull List<StartableComp<?, ?>> installed, @NonNull Match match) {
         // 按安装的相反顺序卸载
         for (int i = installed.size() - 1; i >= 0; i--) {
             StartableComp<?, ?> startableComp = installed.get(i);
@@ -243,12 +299,14 @@ public class Match {
      * 使比赛结束
      *
      * @param args 传递给所有组件的结束参数。组件收到的参数可以为 {@code null}（即传入列表不包含对应组件的参数）。
-     *             此方法会将每个参数对象传递给其 {@link CustomData#getSource()} 返回类型的组件
+     *             此方法会将每个参数对象传递给其 {@link CustomData#source()} 返回类型的组件
      */
-    public @NonNull StopResult stop(@Nullable CustomData... args) {
+    public @NonNull OperationResult stop(@Nullable CustomData... args) {
         // 如果未开始
-        if (state != MatchState.IN_PROGRESS) return StopResult.failure(
-                Component.translatable(TranslateKeys.Match.STOP_INVALID_STATE));
+        if (state != MatchState.IN_PROGRESS) return OperationResult.failure(
+                TranslateKeys.Match.STOP_INVALID_STATE);
+
+        state = MatchState.ENDING;
 
         // 结束上下文
         Map<DataKey<?>, CustomData> endContext = new HashMap<>();
@@ -258,7 +316,7 @@ public class Match {
         if (args != null) {
             for (CustomData arg : args) {
                 if (arg != null) {
-                    argMap.put(arg.getSource(), arg);
+                    argMap.put(arg.source(), arg);
                 }
             }
         }
@@ -276,9 +334,10 @@ public class Match {
             // 卸载失败也继续执行，不阻塞其他组件卸载
         }
 
-        state = MatchState.SCHEDULED;
+        // 比赛实例不可复用，不用重置到初始状态
+
         new MatchOverEvent(this, endContext).callEvent();
-        return StopResult.success();
+        return OperationResult.success();
     }
 
     /**
@@ -286,14 +345,14 @@ public class Match {
     */
     @SuppressWarnings("unchecked")
     private <EA extends CustomData, EC extends CustomData> void uninstallOne(
-            EndableComp<EA, EC> component,
-            HashMap<Class<? extends MatchComp>, CustomData> argMap,
-            Map<DataKey<?>, CustomData> endContext
+            @NonNull EndableComp<EA, EC> component,
+            @NonNull HashMap<@NonNull Class<? extends MatchComp>, CustomData> argMap,
+            @NonNull Map<@NonNull DataKey<?>, @NonNull CustomData> endContext
     ) {
         Logger logger = VoidAirRace.getInstance().getLogger();
         // 获取该组件对应的结束参数（可能为 null）
         CustomData arg = argMap.get(component.getClass());
-        EndableComp.ComponentUninstallResult<?> result = null;
+        ValueResult<EC> result = null;
         Component compName = null;
         // 一定满足条件
         if (component instanceof MatchComp matchComp) {
@@ -316,160 +375,172 @@ public class Match {
                             + compName
                             + "' 时发生异常：" + e.getMessage());
         }
-        if (result != null && result.isSuccess()) {
-            CustomData ctx = result.getEndContext();
-            if (ctx != null) {
-                DataKey<?> key = component.getECK();
-                endContext.put(key, ctx);
-            }
+        if (result instanceof ValueResult.WithValue(var ctx)) {
+            // 组件产出了结束上下文
+            DataKey<?> key = component.getECK();
+            endContext.put(key, ctx);
         }
     }
 
     // ---------- API ----------
 
     /**
-     * 获取比赛所用的配置
-     *
-     * @return 比赛配置对象
+     * @return 比赛所用的配置
      */
-    public MatchConfig getConfig() {
+    public @NonNull MatchConfig config() {
         return config;
     }
 
     /**
      * 获取比赛中的比赛组件实例
      *
+     * @param componentType 目标组件的类型
+     *
+     * @return 比赛中的组件实例
+     *
      * @see MatchConfig#getComp(Class)
      * */
-    public <C extends MatchComp> @NonNull C getComp(@NonNull Class<C> componentClass) {
-        return getConfig().getComp(componentClass);
+    public <C extends MatchComp> @NonNull C comp(@NonNull Class<C> componentType) {
+        return config().getComp(componentType);
     }
 
     /**
      * 获取比赛配置中的数据
      *
-     * @see MatchConfig#getData(ConfigurableComp)
+     * @see MatchConfig#dataOf(ConfigurableComp)
      * */
-    public <K extends CustomData> K getConfigData(ConfigurableComp<?, K> component) {
-        return config.getData(component.getConfigKey());
+    public <K extends CustomData> @Nullable K configOf(ConfigurableComp<?, K> component) {
+        return config.dataOf(component.getConfigKey());
     }
-    
+
     /**
      * 获取比赛配置中的数据
      * 
-     * @see MatchConfig#getData(DataKey)
+     * @see MatchConfig#dataOf(DataKey)
      * */
-    public @Nullable <K extends CustomData> K getConfigData(DataKey<K> key) {
-        return config.getData(key);
+    public @Nullable <K extends CustomData> K configOf(DataKey<K> key) {
+        return config.dataOf(key);
     }
 
     /**
-     * @return 当前比赛状态
+     * @return 此比赛当前状态
      *
      * @see MatchState
      * */
-    public MatchState getState() {
+    public @NonNull MatchState state() {
         return state;
     }
 
     /**
-     * 获取比赛记录的指定部分
+     * 对记录段执行的操作，允许抛出受检异常
+     * */
+    @FunctionalInterface
+    public interface RecordAction {
+        /**
+         * 对指定比赛记录段执行操作
+         * */
+        void apply(ConfigurationSection section) throws Exception;
+    }
+
+    /**
+     * 在lambda中操作比赛记录的指定部分（下称“记录段”），然后自动保存（原子性）比赛记录到文件
      *
      * @param module 指定模块
+     * @param fn 对模块的记录段的操作<br>
+     *           其接收一个代表模块的记录段的{@link ConfigurationSection}，
+     *           该段与内存中的记录树共用同一引用，不存在副本概念，对其读写会直接作用于记录本身<br>
+     *           注意：参数受运行时代理管辖，只能在函数体内使用。将参数或其派生对象（子段、
+     *           {@code getParent}/{@code getRoot}等）复制留存、在lambda结束后调用，
+     *           都会立即抛出{@link IllegalStateException}；
+     *           列表型读取结果（如{@code getList}）为副本，直接修改副本不会同步到记录，需通过{@code set}写回
      *
-     * @return 指定模块的记录段
+     * @throws Exception 如果传入的{@code fn}抛出了异常此方法内不会处理，直接向外传播
      * */
-    public ConfigurationSection getRecord(@NonNull NamespacedKey module) {
+    public void record(@NonNull NamespacedKey module,
+                       @NonNull RecordAction fn)
+            throws Exception {
+        // 获取模块的记录段
         String key = module.getNamespace()
                 + "___"
                 + module.getKey();
-        if (!recordInst.contains(key)) return recordInst.createSection(key);
-        return recordInst.getConfigurationSection(key);
+        ConfigurationSection section;
+        if (!recordInst.contains(key)) {
+            section = recordInst.createSection(key);
+        } else {
+            section = recordInst.getConfigurationSection(key);
+        }
+
+        // 处理
+        // 管辖标记：本次访问记录对象调用期间为true，结束（含异常）后置false，代理随之失效
+        AtomicBoolean live = new AtomicBoolean(true);
+        try {
+            fn.apply(recordGuard(section, live)); // 调用者传入的函数可能抛出异常
+        } finally {
+            live.set(false); // 到期：传入的段及其派生子段立即失效
+        }
+
+        // 自动保存
+        recordInst.saveAtomic();
     }
 
     /**
-     * 持久化内存中的比赛记录
-     * */
-    public void saveRecord() {
-        Config.getInstance().save(recordInst);
-    }
-
-    // ------ 结果类型 ------
-
-    /**
-     * 开始比赛的结果
+     * 为记录段创建受管辖的运行时代理（{@link java.lang.reflect.Proxy}）<br>
+     * 管辖规则：
+     * <ul>
+     *     <li>{@code live}为false（回调已结束）后，对该段及其全部派生子段的任何方法调用抛出
+     *     {@link IllegalStateException}，使“在record回调外使用记录段”立即暴露而非静默读写；</li>
+     *     <li>拒绝{@code getParent}/{@code getRoot}，防止借树结构向上取到未受管辖的节点绕过检测；</li>
+     *     <li>{@code getConfigurationSection}/{@code createSection}返回的子段继续包装，管辖随树向下传播；</li>
+     *     <li>列表型返回值（如{@code getList}）转为副本，防止留存活引用后绕过代理直接改动记录。</li>
+     * </ul>
+     * 注意：{@code set}等操作仍委托到真实节点上执行，代理只做检查与转发，
+     * 不改变记录段与记录树共用同一引用的语义。
      *
-     * @see Match#start(CustomData...)
-     * */
-    public static class StartResult extends OperationResult {
-        public StartResult(boolean success, @Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static StartResult success() {
-            return new StartResult(true, null);
-        }
-
-        public static StartResult failure(Component displayMessage) {
-            return new StartResult(false, displayMessage);
-        }
-    }
-
-    /**
-     * 结束比赛的结果
+     * @param real 真实记录段
+     * @param live 管辖生效标记，同一次record的全部代理共享
      *
-     * @see Match#stop(CustomData...)
+     * @return 受管辖的代理段
      * */
-    public static class StopResult extends OperationResult {
+    private static ConfigurationSection recordGuard(ConfigurationSection real, AtomicBoolean live) {
+        return (ConfigurationSection) Proxy.newProxyInstance(
+                ConfigurationSection.class.getClassLoader(),
+                new Class<?>[]{ConfigurationSection.class},
+                (proxy, method, args) -> {
+                    String name = method.getName();
 
-        public StopResult(boolean success, @Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
+                    // 到期检查：回调结束后经留存引用进来的调用全部在此拦截
+                    if (!live.get()) {
+                        throw new IllegalStateException(
+                                "比赛记录段在record回调外被使用: " + name
+                                        + " @ " + real.getCurrentPath());
+                    }
 
-        public static StopResult success() {
-            return new StopResult(true, null);
-        }
+                    // 阻断向上逃逸出本段作用域的入口
+                    if (method.getParameterCount() == 0
+                            && ("getParent".equals(name) || "getRoot".equals(name))) {
+                        throw new IllegalStateException(
+                                "比赛记录段禁止经" + name + "逃逸出作用域: "
+                                        + real.getCurrentPath());
+                    }
 
-        public static StopResult failure(Component displayMessage) {
-            return new StopResult(false, displayMessage);
-        }
+                    Object result;
+                    try {
+                        result = method.invoke(real, args);
+                    } catch (InvocationTargetException e) {
+                        // 解包还原，保持与真实记录段一致的异常语义
+                        throw e.getCause() != null ? e.getCause() : e;
+                    }
+
+                    // 子段继续受管辖（共享live）
+                    if (result instanceof ConfigurationSection) {
+                        return recordGuard((ConfigurationSection) result, live);
+                    }
+                    // 活引用列表转副本（getStringList等本就是副本，此处覆盖getList/getMapList等）
+                    if (result instanceof List<?>) {
+                        return new ArrayList<Object>((List<?>) result);
+                    }
+                    return result;
+                });
     }
 
-    /**
-     * 构造比赛实例的结果
-     *
-     * @see Match#create(MatchConfig)
-     * */
-    public static class CreateMatchResult extends ValueResult<Match> {
-        public CreateMatchResult(boolean success, @Nullable Component displayMessage, @Nullable Match match) {
-            super(success, displayMessage, match);
-        }
-
-        public static CreateMatchResult success(@NonNull Match match) {
-            return new CreateMatchResult(true, null, match);
-        }
-
-        public static CreateMatchResult failure(Component displayMessage) {
-            return new CreateMatchResult(false, displayMessage, null);
-        }
-    }
-
-    /**
-     * 安装组件的结果
-     *
-     * @see Match#installComponents(CustomData...)
-     * */
-    private static class InstallComponentsResult extends ValueResult<Map<DataKey<?>, CustomData>> {
-        public InstallComponentsResult(boolean success, @Nullable Component displayMessage, @Nullable Map<DataKey<?>, CustomData> ctx) {
-            super(success, displayMessage, ctx);
-        }
-
-        public static InstallComponentsResult success(@NonNull Map<DataKey<?>, CustomData> match) {
-            return new InstallComponentsResult(true, null, match);
-        }
-
-        public static InstallComponentsResult failure(Component displayMessage) {
-            return new InstallComponentsResult(false, displayMessage, null);
-        }
-    }
 }

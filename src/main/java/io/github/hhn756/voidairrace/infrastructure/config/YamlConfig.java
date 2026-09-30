@@ -6,8 +6,9 @@ import io.github.hhn756.voidairrace.exception.ConfigException;
 import net.kyori.adventure.text.Component;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,10 +25,10 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
     /**
      * 当前配置所属的配置文件枚举
      */
-    private final ConfigDefinition definition;
+    private final ConfigDefinition<?> definition;
 
     @Override
-    public @NonNull ConfigDefinition getDefine() {
+    public @NonNull ConfigDefinition<?> getDefine() {
         return definition;
     }
 
@@ -36,7 +37,7 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
      *
      * @param definition 源配置文件
      */
-    public YamlConfig(@NonNull ConfigDefinition definition) {
+    public YamlConfig(@NonNull ConfigDefinition<?> definition) {
         this.definition = definition;
     }
 
@@ -51,11 +52,22 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
     }
 
     /**
-     * 原子性地保存配置到指定文件
+     * 原子性地保存配置对象在内存中已进行过的所有修改
      *
-     * @param targetFile       目标文件
      * @throws ConfigException 如果发生 I/O 错误或原子移动不支持且回退失败
-     */
+     * */
+    @Override
+    public void saveAtomic() throws ConfigException {
+        FileConfig.super.saveAtomic();
+    }
+
+    /**
+     * 原子性地保存配置对象在内存中已进行过的所有修改到指定文件中
+     *
+     * @param targetFile 要将配置数据保存到的文件
+     *
+     * @throws ConfigException 如果发生 I/O 错误或原子移动不被支持且回退失败
+     * */
     @Override
     public void saveAtomic(@NonNull File targetFile) throws ConfigException {
         String errMsg = "原子性的保存配置文件 失败: " + targetFile.getName();
@@ -107,9 +119,7 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
             throw new ConfigException(
                     errMsg,
                     e,
-                    Component.translatable(
-                            TranslateKeys.Config.SAVE_ATOMIC_CANT_SAVE
-                    )
+                    Component.translatable(TranslateKeys.Config.SAVE_ATOMIC_CANT_SAVE)
             );
         }
     }
@@ -149,15 +159,17 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
      * 获取键所指定路径的值
      *
      * @param key 配置键
-     * @param def 目标字段的值不存在或为{@code null}时方法返回的默认值
+     * @param def 默认值
      *
-     * @return 结果值
+     * @return 如果目标字段不存在或值为{@code null}返回默认值，否则返回字段值
      *
      * @throws ClassCastException 如果键预期的值类型和实际值类型不兼容（无法强制转换）
      */
     @Override
+    @Contract("_, !null -> !null")
     @SuppressWarnings("unchecked")
-    public <T> T get(@NonNull ConfigKey<T> key, T def) throws ClassCastException {
+    public <T> T get(@NonNull ConfigKey<T> key, @Nullable T def) throws ClassCastException {
+        // 父类已经完全实现了“不存在或为 null 时返回 def”的逻辑
         return (T) get(key.path(), def);
     }
 
@@ -199,5 +211,9 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
     public @Nullable YamlSection getConfigurationSection(@NonNull String path) {
         ConfigurationSection section = super.getConfigurationSection(path);
         return section == null ? null : new YamlSection(section, definition);
+    }
+
+    public @Nullable YamlSection getSection(@NonNull String path) {
+        return getConfigurationSection(path);
     }
 }

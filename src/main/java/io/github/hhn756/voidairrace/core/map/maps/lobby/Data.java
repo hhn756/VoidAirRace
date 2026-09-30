@@ -13,7 +13,7 @@ class Data {
     static final NamespacedKey MAP_ID = Plugin.key("lobby");
     static final World mapWorld = Bukkit.getWorld("world");
 
-    static final HashMap<BoundingBox, TeamArea> regionToTeam = new HashMap<BoundingBox, TeamArea>();
+    static final HashMap<BoundingBox, TeamArea> regionToTeam = new HashMap<>();
 
     static {
         double firstStartX = 27.0;

@@ -60,14 +60,14 @@ public class Playing implements PlayerState, Listener {
 
     @EventHandler
     public void onMatchOver(MatchOverEvent event) {
-        event.getMatch().getComp(ContestantComp.class).getSurvivingPlayers().forEach(this::leaveMatch);
+        event.getMatch().comp(ContestantComp.class).survivingPlayers().forEach(this::leaveMatch);
     }
 
     private void leaveMatch(Player player) {
         Match currentMatch = MatchCoordinator.getInstance().getCurrentMatch();
         PlayerStateManager.getInstance().toggle(player, PlayState.FREE.getValue());
         if (currentMatch != null) {
-            currentMatch.getComp(ContestantComp.class).leaveMatch(player);
+            currentMatch.comp(ContestantComp.class).leaveMatch(player);
         }
     }
 }

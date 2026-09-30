@@ -4,7 +4,6 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.ComponentPriority;
 import io.github.hhn756.voidairrace.core.match.DataKey;
 import io.github.hhn756.voidairrace.core.match.Match;
-import io.github.hhn756.voidairrace.core.match.MatchConfig;
 import io.github.hhn756.voidairrace.core.match.componentbase.ConfigurableComp;
 import io.github.hhn756.voidairrace.core.match.componentbase.CustomData;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
@@ -13,7 +12,7 @@ import io.github.hhn756.voidairrace.core.team.TeamRoster;
 import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;
 import io.github.hhn756.voidairrace.event.PlayerJoinMatchEvent;
 import io.github.hhn756.voidairrace.event.PlayerLeaveMatchEvent;
-import net.kyori.adventure.text.Component;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.Range;
@@ -58,22 +57,16 @@ public class ContestantComp extends MatchComp
     }
 
     @Override
-    public @NonNull CustomConfigResult<ContestantConfig> createCustomConfig(@Nullable ContestantECFG expected) {
+    public @NonNull ValueResult<ContestantConfig> createCustomConfig(@Nullable ContestantECFG expected) {
         Collection<? extends Player> initialPlayers = expected != null
                 ? expected.expectedContestants()
                 : Collections.emptyList();
-        return CustomConfigResult.success(new ContestantConfig(initialPlayers));
+        return ValueResult.success(new ContestantConfig(initialPlayers));
     }
 
     @Override
-    public @NonNull DefaultConfigResult<ContestantConfig> createDefaultConfig() {
-        return DefaultConfigResult.success(new ContestantConfig(Collections.emptyList()));
-    }
-
-    @Override
-    public MatchConfig.@NonNull ValidationConfigResult validateConfig(@NonNull ContestantConfig config) {
-        // 可在此检查初始玩家是否都属于有效队伍等，简单返回成功
-        return MatchConfig.ValidationConfigResult.success();
+    public @NonNull ValueResult<ContestantConfig> createDefaultConfig() {
+        return ValueResult.success(new ContestantConfig(Collections.emptyList()));
     }
 
     public @Range(from = 0, to = Integer.MAX_VALUE) int getConfigPriority() {
@@ -88,11 +81,11 @@ public class ContestantComp extends MatchComp
     }
 
     @Override
-    public StartableComp.@NonNull InstallResult<ContestantStartContext> install(@NonNull Match match, @Nullable ContestantStartArg startArg) {
+    public @NonNull ValueResult<ContestantStartContext> install(@NonNull Match match, @Nullable ContestantStartArg startArg) {
         this.match = match;
-        ContestantConfig config = match.getConfig().getData(ContestantComp.CONFIG_KEY);
+        ContestantConfig config = match.config().dataOf(ContestantComp.CONFIG_KEY);
         if (config == null) {
-            return new InstallResult<>(false, Component.translatable(TranslateKeys.BaseComponents.CONTESTANT_COMP_NO_CONFIG), null);
+            return ValueResult.failure(TranslateKeys.BaseComponents.CONTESTANT_COMP_NO_CONFIG);
         }
 
         // 初始化存活玩家和队伍计数
@@ -100,13 +93,13 @@ public class ContestantComp extends MatchComp
             joinMatchInternal(player);
         }
 
-        return InstallResult.success(new ContestantStartContext(survivingPlayers.size()));
+        return ValueResult.success(new ContestantStartContext(survivingPlayers.size()));
     }
 
     // ==================== 公共 API ====================
 
     public void joinMatch(@NonNull Player player) {
-        if (isOnMatch(player) || eliminatedPlayers.contains(player)) {
+        if (contains(player) || eliminatedPlayers.contains(player)) {
             return;
         }
         joinMatchInternal(player);
@@ -123,7 +116,7 @@ public class ContestantComp extends MatchComp
     }
 
     public void leaveMatch(@NonNull Player player) {
-        if (!isOnMatch(player)) {
+        if (!contains(player)) {
             return;
         }
         survivingPlayers.remove(player);
@@ -146,35 +139,35 @@ public class ContestantComp extends MatchComp
      *
      * @return 指定玩家是否在比赛中存活
      * */
-    public boolean isOnMatch(@NonNull Player player) {
+    public boolean contains(@NonNull Player player) {
         return survivingPlayers.contains(player);
     }
 
     /**
      * @return 当前比赛中存活的所有玩家
      * */
-    public Set<Player> getSurvivingPlayers() {
+    public Set<Player> survivingPlayers() {
         return Collections.unmodifiableSet(survivingPlayers);
     }
 
     /**
      * @return 当前比赛中所有存活的队伍，键为队伍；值为对应队伍的剩余（存活）玩家数
      * */
-    public Map<@NonNull Team,@NonNull Integer> getSurvivingTeams() {
+    public Map<@NonNull Team,@NonNull Integer> survivingTeams() {
         return Collections.unmodifiableMap(survivingTeams);
     }
 
     /**
      * @return 目前比赛中存活（剩余人数大于0）队伍的数量
      * */
-    public int getSurvivingTeamCount() {
+    public int survivingTeamCount() {
         return survivingTeams.size();
     }
 
     /**
      * @return 所有已淘汰、不可加入比赛的玩家
      * */
-    public Set<Player> getEliminatedPlayers() {
+    public Set<Player> eliminatedPlayers() {
         return Collections.unmodifiableSet(eliminatedPlayers);
     }
 
@@ -183,7 +176,7 @@ public class ContestantComp extends MatchComp
      * */
     public static record ContestantConfig(Collection<? extends Player> initialContestants) implements CustomData {
         @Override
-        public @NonNull Class<? extends MatchComp> getSource() {
+        public @NonNull Class<? extends MatchComp> source() {
             return ContestantComp.class;
         }
     }
@@ -191,9 +184,9 @@ public class ContestantComp extends MatchComp
     /**
      * @param expectedContestants 调用者可以传入期望的初始参赛者列表（可空）
      */
-    public static record ContestantECFG(@NonNull Collection<? extends Player> expectedContestants) implements CustomData {
+    public record ContestantECFG(@NonNull Collection<? extends Player> expectedContestants) implements CustomData {
         @Override
-        public @NonNull Class<? extends MatchComp> getSource() {
+        public @NonNull Class<? extends MatchComp> source() {
             return ContestantComp.class;
         }
     }
@@ -202,7 +195,7 @@ public class ContestantComp extends MatchComp
         // 比赛开始时可以额外指定要加入的玩家（覆盖或追加），根据需要设计字段
         // 此处为空实现，可根据需要扩展
         @Override
-        public @NonNull Class<? extends MatchComp> getSource() {
+        public @NonNull Class<? extends MatchComp> source() {
             return ContestantComp.class;
         }
     }
@@ -210,9 +203,9 @@ public class ContestantComp extends MatchComp
     /**
      * @param initialPlayerCount 开始上下文可以返回存活玩家快照等信息，此处简单实现
      */
-    public static record ContestantStartContext(int initialPlayerCount) implements CustomData {
+    public record ContestantStartContext(int initialPlayerCount) implements CustomData {
         @Override
-        public @NonNull Class<? extends MatchComp> getSource() {
+        public @NonNull Class<? extends MatchComp> source() {
             return ContestantComp.class;
         }
     }

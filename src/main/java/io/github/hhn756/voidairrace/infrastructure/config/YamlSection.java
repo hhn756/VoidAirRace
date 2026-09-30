@@ -4,13 +4,14 @@ import io.github.hhn756.voidairrace.event.ConfigFieldChangeEvent;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -22,9 +23,9 @@ import java.util.Set;
  */
 public class YamlSection implements ConfigurationSection {
     private final ConfigurationSection delegate;
-    private final ConfigDefinition source;
+    private final ConfigDefinition<?> source;
 
-    public YamlSection(@NonNull ConfigurationSection delegate, @NonNull ConfigDefinition source) {
+    public YamlSection(@NonNull ConfigurationSection delegate, @NonNull ConfigDefinition<?> source) {
         this.delegate = delegate;
         this.source = source;
     }
@@ -104,7 +105,7 @@ public class YamlSection implements ConfigurationSection {
     @Override public boolean isSet(@NonNull String path) { return delegate.isSet(path); }
     @Override public @Nullable String getCurrentPath() { return delegate.getCurrentPath(); }
     @Override public @NonNull String getName() { return delegate.getName(); }
-    @Override public @Nullable org.bukkit.configuration.Configuration getRoot() { return delegate.getRoot(); }
+    @Override public @Nullable Configuration getRoot() { return delegate.getRoot(); }
     @Override public @Nullable ConfigurationSection getParent() { return delegate.getParent(); }
     @Override public @Nullable Object get(@NonNull String path) { return delegate.get(path); }
     @Override public @Nullable Object get(@NonNull String path, @Nullable Object def) { return delegate.get(path, def); }

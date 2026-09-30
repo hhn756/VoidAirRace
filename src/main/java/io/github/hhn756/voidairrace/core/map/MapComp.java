@@ -12,7 +12,8 @@ import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
-import net.kyori.adventure.text.Component;
+import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.HandlerList;
@@ -36,58 +37,49 @@ public class MapComp extends MatchComp
     }
 
     @Override
-    public @NonNull CustomConfigResult<MapConfig> createCustomConfig(@Nullable MapECFG expected) {
-        NamespacedKey mapId;
-
-        if (expected != null) {
-            mapId = expected.expectedMapId();
-        } else {
-            // 回退到默认配置
-            return new CustomConfigResult<>(
-                    true,
-                    createDefaultConfig().getValue(),
-                    null
-            );
+    public @NonNull ValueResult<MapConfig> createCustomConfig(@Nullable MapECFG expected) {
+        if (expected == null) {
+            // 回退到默认配置：直接转发其结果，失败原因随之上传
+            return createDefaultConfig();
         }
+
         MapEntry mapEntry = Registry.getInstance().category(Categories.MAP).get(expected.expectedMapId());
 
-        // 检查 变量是否为null 和 地图是否存在
-        if (mapEntry == null) {
-            return new CustomConfigResult<>(
-                    false,
-                    null,
-                    Component.translatable(TranslateKeys.Map.CREATE_DEFAULT_CONFIG_MAP_NOTFOUND)
-            );
-        }
+        // 如果地图不存在（地图 id 属于服务端参数，只进技术性消息）
+        if (mapEntry == null) return ValueResult.failure(
+                TranslateKeys.Map.CREATE_DEFAULT_CONFIG_MAP_NOTFOUND,
+                "地图未注册：" + expected.expectedMapId()
+        );
+        // 如果地图不可玩
+        if (!mapEntry.isPlayable()) return ValueResult.failure(
+                TranslateKeys.Map.CREATE_CUSTOM_CONFIG_MAP_NOT_PLAYABLE,
+                "地图不可游玩：" + expected.expectedMapId()
+        );
 
-        // 检查地图是否可玩
-        if (!mapEntry.isPlayable()) {
-            return new CustomConfigResult<>(
-                    false,
-                    null,
-                    Component.translatable(TranslateKeys.Map.CREATE_CUSTOM_CONFIG_MAP_NOT_PLAYABLE)
-            );
-        }
-
-        return CustomConfigResult.success(new MapConfig((PlayableGameMap) mapEntry.newInstance()));
+        return ValueResult.success(new MapConfig((PlayableGameMap) mapEntry.newInstance()));
     }
 
     @Override
-    public @NonNull DefaultConfigResult<MapConfig> createDefaultConfig() {
+    public @NonNull ValueResult<MapConfig> createDefaultConfig() {
         NamespacedKey selectedMapId = NamespacedKey.fromString(
                 Config.getInstance()
                         .getYmlConfig(PublicFiles.GAME_SETTINGS)
                         .get(GameSettingKeys.SELECTED_MAP_ID, GrassLand.getID().toString())
         );
-        GameMap map = Registry.getInstance().category(Categories.MAP).get(selectedMapId).newInstance();
-        if (!(map instanceof PlayableGameMap playableMap)) {
-            return new DefaultConfigResult<>(
-                    false,
-                    null,
-                    Component.translatable(TranslateKeys.Map.CREATE_DEFAULT_CONFIG_MAP_NOT_PLAYABLE)
-            );
-        }
-        return DefaultConfigResult.success(new MapConfig(playableMap));
+        MapEntry mapEntry = Registry.getInstance().category(Categories.MAP).get(selectedMapId);
+
+        // 如果地图不存在（地图 id 属于服务端参数，只进技术性消息）
+        if (mapEntry == null) return ValueResult.failure(
+                TranslateKeys.Map.CREATE_DEFAULT_CONFIG_MAP_NOTFOUND,
+                "地图未注册：" + selectedMapId
+        );
+        // 如果地图不可玩
+        if (!mapEntry.isPlayable()) return ValueResult.failure(
+                TranslateKeys.Map.CREATE_DEFAULT_CONFIG_MAP_NOT_PLAYABLE,
+                "地图不可游玩：" + selectedMapId
+        );
+
+        return ValueResult.success(new MapConfig((PlayableGameMap) mapEntry.newInstance()));
     }
 
     @Override
@@ -110,19 +102,17 @@ public class MapComp extends MatchComp
     }
 
     @Override
-    public StartableComp.@NonNull InstallResult<MapSC> install(
+    public @NonNull ValueResult<MapSC> install(
             @NonNull Match match,
             @Nullable CustomData startArg) {
 
-        PlayableGameMap gameMap = match.getConfigData(MapComp.CONFIG_KEY).map();
+        PlayableGameMap gameMap = match.configOf(MapComp.CONFIG_KEY).map();
 
-        // 调用地图的开始方法
-        PlayableGameMap.StartResult startResult = gameMap.start(match);
+        // 调用地图的开始方法；地图开始失败时，把地图给出的原因包装到“地图组件开始失败”键下返回
+        OperationResult startResult = gameMap.start(match);
         if (!startResult.isSuccess()) {
-            Component msg = startResult.getDisplayMessage() == null
-                    ? Component.translatable(TranslateKeys.Map.MAP_COMPONENT_SELECTED_START_FAILED)
-                    : startResult.getDisplayMessage();
-            return new InstallResult<>(false, msg, null);
+            return ValueResult.<MapSC>fromOperation(startResult)
+                    .causedBy(TranslateKeys.Map.MAP_COMPONENT_SELECTED_START_FAILED);
         }
 
         // 注册是 bukkit 事件监听器的地图
@@ -130,7 +120,7 @@ public class MapComp extends MatchComp
             Bukkit.getPluginManager().registerEvents(listener, VoidAirRace.getInstance());
         }
 
-        return InstallResult.success(new MapSC(gameMap));
+        return ValueResult.success(new MapSC(gameMap));
     }
 
     // -------------------- EndableComp --------------------
@@ -141,15 +131,16 @@ public class MapComp extends MatchComp
     }
 
     @Override
-    public @NonNull ComponentUninstallResult<CustomData> uninstall(
+    public @NonNull ValueResult<CustomData> uninstall(
             @NonNull Match match,
             @Nullable CustomData endArg) {
-        PlayableGameMap gameMap = match.getConfig().getData(MapComp.CONFIG_KEY).map();
+        PlayableGameMap gameMap = match.config().dataOf(MapComp.CONFIG_KEY).map();
         gameMap.over(match);
         if (gameMap instanceof Listener listener) {
             HandlerList.unregisterAll(listener);
         }
-        return new ComponentUninstallResult<>(true, null, null);
+        // 卸载成功，不产生结束上下文
+        return ValueResult.empty();
     }
 
     /**
@@ -157,21 +148,21 @@ public class MapComp extends MatchComp
      * */
     public record MapConfig(@NonNull PlayableGameMap map) implements CustomData {
         @Override
-        public @NonNull Class<? extends MatchComp> getSource() {
+        public @NonNull Class<? extends MatchComp> source() {
             return MapComp.class;
         }
     }
 
     public record MapECFG(@NonNull NamespacedKey expectedMapId) implements CustomData {
         @Override
-        public @NonNull Class<? extends MatchComp> getSource() {
+        public @NonNull Class<? extends MatchComp> source() {
             return MapComp.class;
         }
     }
 
     public record MapSC(@NonNull PlayableGameMap gameMap) implements CustomData {
         @Override
-        public @NonNull Class<? extends MatchComp> getSource() {
+        public @NonNull Class<? extends MatchComp> source() {
             return MapComp.class;
         }
     }

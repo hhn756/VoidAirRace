@@ -2,9 +2,8 @@ package io.github.hhn756.voidairrace.core.match;
 
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
-import io.github.hhn756.voidairrace.result.base.ValueResult;
-import net.kyori.adventure.text.Component;
-import org.jetbrains.annotations.Nullable;
+import io.github.hhn756.voidairrace.exception.UserFriendlyException;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import org.jspecify.annotations.NonNull;
 
 import java.lang.reflect.Constructor;
@@ -50,35 +49,26 @@ public class CompEntry {
     /**
      * 创建一个此元数据所代表组件类型的新实例
      *
-     * @return 新组件实例
+     * @return 新组件实例（成功时携带）；构造失败时携带失败信息：
+     *         用户消息为翻译键（异常实现{@link UserFriendlyException}时附带其用户消息），
+     *         技术性消息为异常文本，异常原样透传
      */
-    public @NonNull InstantiateResult newInstance() {
+    public @NonNull ValueResult<MatchComp> newInstance() {
         try {
             MatchComp instance = constructor.newInstance();
-            return InstantiateResult.success(instance);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            return InstantiateResult.failure(
-                    Component.translatable(TranslateKeys.Match.COMP_ENTRY_INSTANTIATE_FAILURE)
+            return ValueResult.success(instance);
+        } catch (ReflectiveOperationException e) {
+            // 反射包装链：InvocationTargetException.getCause()才是组件构造器抛出的原始异常
+            Throwable root = (e instanceof InvocationTargetException ite && ite.getCause() != null)
+                    ? ite.getCause()
+                    : e;
+            // 异常文本属于技术性信息，只进技术性消息；异常自带可给玩家的文案时保留
+            return ValueResult.failure(
+                    TranslateKeys.Match.COMP_ENTRY_INSTANTIATE_FAILURE,
+                    root instanceof UserFriendlyException friendly ? friendly.getUserMessage() : null,
+                    root.getClass().getSimpleName() + ": " + root.getMessage(),
+                    root
             );
-        }
-    }
-
-    /**
-     * 实例化组件的结果
-     *
-     * @see CompEntry#newInstance()
-     * */
-    public static final class InstantiateResult extends ValueResult<MatchComp> {
-        public InstantiateResult(boolean success, @Nullable Component displayMessage, @Nullable MatchComp value) {
-            super(success, displayMessage, value);
-        }
-
-        public static InstantiateResult success(MatchComp component) {
-            return new InstantiateResult(true, null, component);
-        }
-
-        public static InstantiateResult failure(Component displayMessage) {
-            return new InstantiateResult(false, displayMessage, null);
         }
     }
 }

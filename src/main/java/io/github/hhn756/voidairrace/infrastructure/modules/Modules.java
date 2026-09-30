@@ -1,64 +1,102 @@
-package io.github.hhn756.voidairrace.infrastructure.moduleloader;
+package io.github.hhn756.voidairrace.infrastructure.modules;
 
 import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
+import io.papermc.paper.plugin.bootstrap.BootstrapContext;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
+import org.jspecify.annotations.NonNull;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.*;
 import java.util.logging.Logger;
 
 /**
- * 模块加载器
- *
- * <p>对外只有三个静态方法：
+ * 模块工具类，统一承载两种“模块”的加载逻辑：
  * <ul>
- *   <li>{@link #loadAll(Collection)}：主类在插件启用时调用，加载全部模块</li>
- *   <li>{@link #unloadAll()}：主类在插件停用时调用，逆序卸载全部模块</li>
- *   <li>{@link #getModule(Class)}：非模块代码获取模块单例</li>
+ *   <li>引导阶段任务（{@link BootstrapStage}）：{@link #bootstrapAll(BootstrapContext)} 由 {@code Bootstrap}
+ *       在插件引导阶段调用，扫描全部实现类并逐个执行一次 {@code onBootstrap}，无卸载概念</li>
+ *   <li>普通模块（{@link Module}）：{@link #loadAll(Collection)} 在插件启用时调用，按前置声明拓扑排序加载；
+ *       {@link #unloadAll()} 在插件停用时逆序卸载</li>
  * </ul>
- * 其余方法均为私有静态内部辅助方法
+ * 供非模块代码获取普通模块单例的方法是 {@link #getModule(Class)}
  *
- * <p>本框架只依赖 Java 标准库与 {@code VoidAirRace.getInstance().getLogger()}
+ * <p>除引导方法依赖 Paper 引导 API（{@code BootstrapContext} / {@code ComponentLogger}）外，
+ * 其余部分只依赖 Java 标准库与 {@code VoidAirRace.getInstance().getLogger()}
  * */
-public final class ModuleLoader {
+public final class Modules {
     /**
      * 本次插件启用中所有已实例化的模块实例，按“首次接触顺序”排列，key 为模块类
      * */
-    private static final Map<Class<? extends Module>, Module> INSTANCES = new LinkedHashMap<>();
+    private static final @NonNull Map<Class<? extends Module>, Module> INSTANCES = new LinkedHashMap<>();
 
     /**
      * 模块类 -> 其 {@code getRequiredModules()} 声明的前置模块类集合
      * */
-    private static final Map<Class<? extends Module>, Set<Class<? extends Module>>> REQUIRED = new HashMap<>();
+    private static final @NonNull Map<Class<? extends Module>, Set<Class<? extends Module>>> REQUIRED = new HashMap<>();
 
     /**
      * 实际执行过 {@code onLoad} 的模块，按加载顺序排列；失败回滚与正常卸载都取此列表的逆序
      * */
-    private static final List<Class<? extends Module>> LOADED = new ArrayList<>();
+    private static final @NonNull List<Class<? extends Module>> LOADED = new ArrayList<>();
 
     /**
      * 本次插件启用的模块列表，用于把主类传入的列表跨插件生命周期保留下来
      * */
     private static List<Class<? extends Module>> declaredModules = List.of();
 
-    private ModuleLoader() {
+    private Modules() {
     }
 
     /**
-     * 加载全部模块：实例化、检查前置与循环依赖、按拓扑顺序执行 {@code onLoad}。
+     * 引导全部引导阶段任务：扫描 {@link BootstrapStage} 的全部实现类，逐个实例化并执行 {@code onBootstrap}
+     *
+     * <p>由 {@code Bootstrap} 在插件引导阶段调用一次；单个任务失败只记录错误并继续处理其余任务，不抛异常
+     *
+     * @param context 引导上下文
+     * */
+    public static synchronized void bootstrapAll(@NonNull BootstrapContext context) {
+        ComponentLogger logger = context.getLogger();
+        ClassLoader classLoader = Modules.class.getClassLoader();
+        URL codeSourceUrl = Modules.class.getProtectionDomain().getCodeSource().getLocation();
+
+        // 扫描所有实现了 BootstrapStage 的类
+        Collection<Class<BootstrapStage>> stageClasses = ClassScanner.scanSubclasses(
+                classLoader, codeSourceUrl, BootstrapStage.class, "io.github.hhn756.voidairrace");
+        logger.debug("共扫描到 {} 个 BootstrapStage 实现：", stageClasses.size());
+        for (Class<BootstrapStage> stageClass : stageClasses) {
+            logger.debug(stageClass.getName());
+        }
+
+        // 实例化并调用
+        for (Class<BootstrapStage> stageClass : stageClasses) {
+            try {
+                BootstrapStage stage = createInstance(stageClass);
+                stage.onBootstrap(context);
+                logger.debug("已引导: {}", stageClass.getSimpleName());
+            } catch (Exception e) {
+                logger.error("引导阶段任务 {} 执行失败", stageClass.getName(), e);
+            }
+        }
+    }
+
+    /**
+     * 加载全部模块：实例化、检查前置与循环依赖、按拓扑顺序执行 {@code onLoad}
      * <p>
      * 任一模块的 {@code onLoad} 抛出异常时，按加载逆序回滚（先卸载刚失败的模块本身），回滚完成后抛出异常
      *
-     * @param modules 待加载模块列表
+     * @param modules 待加载模块列表，顺序无关（加载顺序由依赖拓扑排序决定）
+     *
      * @throws IllegalStateException 校验失败、循环依赖或模块加载失败
      * */
-    public static synchronized void loadAll(Collection<Class<? extends Module>> modules) {
+    public static synchronized void loadAll(Collection<? extends Class<? extends Module>> modules) {
         if (modules == null) throw new IllegalStateException("待加载模块列表为 null");
         if (!INSTANCES.isEmpty()) throw new IllegalStateException("模块已加载，不能在同一次插件启用中重复加载");
 
         declaredModules = List.copyOf(modules);
-        logger().info("模块加载器：本次启用声明 " + declaredModules.size() + " 个模块。");
+        logger().info("模块加载器：本次启用声明 " + declaredModules.size() + " 个模块");
 
         List<Class<? extends Module>> order;
         try {
@@ -85,13 +123,13 @@ public final class ModuleLoader {
             try {
                 invoke(moduleClass, "onLoad");
             } catch (Throwable failure) {
-                logger().severe("模块 " + display(moduleClass) + " 的 onLoad 执行失败，开始回滚 " + LOADED.size() + " 个已加载模块。");
+                logger().severe("模块 " + display(moduleClass) + " 的 onLoad 执行失败，开始回滚 " + LOADED.size() + " 个已加载模块");
                 rollback();
-                throw new IllegalStateException("模块 " + display(moduleClass) + " 加载失败，已回滚全部模块。", failure);
+                throw new IllegalStateException("模块 " + display(moduleClass) + " 加载失败，已回滚全部模块", failure);
             }
         }
 
-        logger().info("模块加载器：全部 " + LOADED.size() + " 个模块加载完成。");
+        logger().info("模块加载器：全部 " + LOADED.size() + " 个模块加载完成");
     }
 
     /**
@@ -105,7 +143,7 @@ public final class ModuleLoader {
             return;
         }
 
-        logger().info("模块卸载器：按加载逆序卸载 " + LOADED.size() + " 个模块。");
+        logger().info("模块卸载器：按加载逆序卸载 " + LOADED.size() + " 个模块");
         List<Class<? extends Module>> snapshot = new ArrayList<>(LOADED);
         for (int i = snapshot.size() - 1; i >= 0; i--) {
             Class<? extends Module> moduleClass = snapshot.get(i);
@@ -123,14 +161,16 @@ public final class ModuleLoader {
      * 获取模块单例实例，供非模块代码调用
      *
      * @param moduleClass 模块类
+     *
      * @return 模块实例
+     *
      * @throws IllegalStateException 该模块未在本次启用中加载
      * */
     public static synchronized <T extends Module> T getModule(Class<T> moduleClass) {
         if (moduleClass == null) throw new IllegalStateException("moduleClass 为 null");
         Module instance = INSTANCES.get(moduleClass);
         if (instance == null) {
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 未加载：不在本次插件启用的模块列表中，或已随插件停用卸载。");
+            throw new IllegalStateException("模块 " + display(moduleClass) + " 未加载：不在本次插件启用的模块列表中，或已随插件停用卸载");
         }
         return moduleClass.cast(instance);
     }
@@ -138,7 +178,7 @@ public final class ModuleLoader {
     // ==================== 以下为私有静态内部辅助方法 ====================
 
     /**
-     * 从 root 出发做可达闭包：逐个实例化模块，并记录其前置集合
+     * 从 root 出发做可达闭包：逐个实例化模块，并记录其前置集合<br>
      * 声明为前置但未出现在待加载列表中的模块会被一并加载，否则前置关系无法成立
      * */
     private static void instantiateGraph(Class<? extends Module> root) {
@@ -156,16 +196,16 @@ public final class ModuleLoader {
             try {
                 declared = instance.getRequiredModules();
             } catch (Throwable failure) {
-                throw new IllegalStateException("模块 " + display(moduleClass) + " 的 getRequiredModules 执行失败。", failure);
+                throw new IllegalStateException("模块 " + display(moduleClass) + " 的 getRequiredModules 执行失败", failure);
             }
 
             Set<Class<? extends Module>> required = new LinkedHashSet<>();
             if (declared == null) {
-                logger().warning("模块 " + display(moduleClass) + " 的 getRequiredModules 返回 null，按无前置处理。");
+                logger().warning("模块 " + display(moduleClass) + " 的 getRequiredModules 返回 null，按无前置处理");
             } else {
                 for (Class<? extends Module> prerequisite : declared) {
                     if (prerequisite == null) {
-                        throw new IllegalStateException("模块 " + display(moduleClass) + " 的前置集合包含 null。");
+                        throw new IllegalStateException("模块 " + display(moduleClass) + " 的前置集合包含 null");
                     }
                     required.add(prerequisite);
                     pending.push(prerequisite);
@@ -176,24 +216,22 @@ public final class ModuleLoader {
     }
 
     /**
-     * 反射调用无参构造器创建模块实例（构造器可以是 private）
+     * 反射调用无参构造器创建实例（构造器可以是 private）；<br>
+     * 供普通模块（{@link Module}）与引导阶段任务（{@link BootstrapStage}）共用
      * */
-    private static Module createInstance(Class<? extends Module> moduleClass) {
-        if (moduleClass.isInterface() || java.lang.reflect.Modifier.isAbstract(moduleClass.getModifiers())) {
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 是接口或抽象类，无法实例化。");
-        }
-        if (!Module.class.isAssignableFrom(moduleClass)) {
-            throw new IllegalStateException("类 " + display(moduleClass) + " 未实现 Module 接口。");
+    private static <T> T createInstance(Class<? extends T> type) {
+        if (type.isInterface() || java.lang.reflect.Modifier.isAbstract(type.getModifiers())) {
+            throw new IllegalStateException("类 " + display(type) + " 是接口或抽象类，无法实例化");
         }
 
         try {
-            Constructor<?> constructor = moduleClass.getDeclaredConstructor();
+            Constructor<?> constructor = type.getDeclaredConstructor();
             constructor.setAccessible(true);
-            return (Module) constructor.newInstance();
+            return type.cast(constructor.newInstance());
         } catch (NoSuchMethodException failure) {
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 缺少无参构造器。", failure);
+            throw new IllegalStateException("类 " + display(type) + " 缺少无参构造器", failure);
         } catch (ReflectiveOperationException | RuntimeException failure) {
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 实例化失败。", failure);
+            throw new IllegalStateException("类 " + display(type) + " 实例化失败", failure);
         }
     }
 
@@ -250,7 +288,7 @@ public final class ModuleLoader {
     }
 
     /**
-     * 加载前对一个模块做完整静态校验：
+     * 加载前对一个模块做完整静态校验：<br>
      * {@code onLoad} / {@code onUnload} 各自必须恰好声明一个、返回 void，
      * 且每个参数都能从前置模块中唯一解析出注入目标
      * */
@@ -283,11 +321,11 @@ public final class ModuleLoader {
         try {
             method.invoke(self, arguments);
         } catch (IllegalAccessException failure) {
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 的 " + methodName + " 无法访问。", failure);
+            throw new IllegalStateException("模块 " + display(moduleClass) + " 的 " + methodName + " 无法访问", failure);
         } catch (InvocationTargetException failure) {
             Throwable cause = failure.getCause();
             if (cause instanceof Error error) throw error;
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 的 " + methodName + " 抛出异常。", cause);
+            throw new IllegalStateException("模块 " + display(moduleClass) + " 的 " + methodName + " 抛出异常", cause);
         }
     }
 
@@ -302,11 +340,11 @@ public final class ModuleLoader {
         }
         if (candidates.size() != 1) {
             throw new IllegalStateException(
-                    "模块 " + display(moduleClass) + " 自身声明的 " + methodName + " 方法数量为 " + candidates.size() + "，必须恰好为 1。");
+                    "模块 " + display(moduleClass) + " 自身声明的 " + methodName + " 方法数量为 " + candidates.size() + "，必须恰好为 1");
         }
         Method method = candidates.get(0);
         if (method.getReturnType() != void.class) {
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 的 " + methodName + " 返回类型必须为 void。");
+            throw new IllegalStateException("模块 " + display(moduleClass) + " 的 " + methodName + " 返回类型必须为 void");
         }
         return method;
     }
@@ -346,7 +384,7 @@ public final class ModuleLoader {
         throw new IllegalStateException(
                 "模块 " + display(moduleClass) + " 的 " + methodName + " 第 " + index + " 个参数类型 "
                         + display(parameterType) + " 存在 " + candidates.size()
-                        + " 个可赋值的前置模块且无类型完全相等的实例，无法确定注入目标。");
+                        + " 个可赋值的前置模块且无类型完全相等的实例，无法确定注入目标");
     }
 
     /**

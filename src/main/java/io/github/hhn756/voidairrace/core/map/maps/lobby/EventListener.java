@@ -10,10 +10,7 @@ import io.github.hhn756.voidairrace.core.team.Teams;
 import io.github.hhn756.voidairrace.event.ConfigFieldChangeEvent;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
 import io.github.hhn756.voidairrace.event.MatchStartedEvent;
-import io.github.hhn756.voidairrace.event.PluginEnableEvent;
-import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
 import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.AutoRegistration;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import org.bukkit.Location;
@@ -129,21 +126,6 @@ public class EventListener implements Listener {
                     teamRoster.leave(player);
                 }
             }
-        }
-    }
-
-    @EventHandler
-    public void onPluginEnable(PluginEnableEvent event) {
-        NamespacedKey selectedMapId = NamespacedKey.fromString(
-                Config.getInstance()
-                        .getYmlConfig(PublicFiles.GAME_SETTINGS)
-                        .get(GameSettingKeys.SELECTED_MAP_ID)
-        );
-        MapEntry mapEntry = Registry.getInstance().category(Categories.MAP).get(selectedMapId);
-        if (mapEntry != null && mapEntry.maxTeams() != null) {
-            State.activeTeamArea = mapEntry.maxTeams();  // 不会是null
-        } else {
-            State.activeTeamArea = 0;
         }
     }
 

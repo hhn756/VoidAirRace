@@ -5,8 +5,8 @@ import io.github.hhn756.voidairrace.infrastructure.config.ConfigKey;
 import io.github.hhn756.voidairrace.infrastructure.util.TypeUtil;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 当配置文件中的某个字段值发生变更时触发的事件
@@ -30,8 +30,8 @@ public class ConfigFieldChangeEvent extends Event {
         return HANDLERS;
     }
 
-    /** 发生变更的配置文件 */
-    private final @NonNull ConfigDefinition file;
+    /** 发生变更的配置文件的路径或名称，不含扩展名 */
+    private final @NonNull ConfigDefinition<?> file;
 
     /**
      * 发生变更的路径<br>
@@ -53,13 +53,13 @@ public class ConfigFieldChangeEvent extends Event {
     /**
      * 构造一个配置变更事件
      *
-     * @param file     发生变更的配置文件
+     * @param file     发生变更的配置文件的路径或名称，不含扩展名
      * @param path     发生变更的路径
      * @param oldValue 旧值
      * @param newValue 新值
      */
     public ConfigFieldChangeEvent(
-            @NonNull ConfigDefinition file,
+            @NonNull ConfigDefinition<?> file,
             @NonNull  String       path,
             @Nullable Object       oldValue,
             @Nullable Object       newValue
@@ -75,7 +75,7 @@ public class ConfigFieldChangeEvent extends Event {
      *
      * @return 代表配置文件的对象
      */
-    public @NonNull ConfigDefinition getFile() {
+    public @NonNull ConfigDefinition<?> getFile() {
         return file;
     }
 

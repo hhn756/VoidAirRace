@@ -13,15 +13,14 @@ import io.github.hhn756.voidairrace.core.match.componentbase.EndableComp;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
 import io.github.hhn756.voidairrace.core.match.componentbase.StartableComp;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
-import io.github.hhn756.voidairrace.result.base.OperationResult;
-import net.kyori.adventure.text.Component;
+import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.scheduler.BukkitTask;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -52,13 +51,13 @@ public class RuleComp extends MatchComp
     }
 
     @Override
-    public StartableComp.@NonNull InstallResult<CustomData> install(@NonNull Match match, CustomData startArg) {
+    public @NonNull ValueResult<CustomData> install(@NonNull Match match, CustomData startArg) {
         this.match = match;
         // 启动 tick 调度器
         tickTask = Bukkit.getScheduler().runTaskTimer(VoidAirRace.getInstance(), () -> {
             new ArrayList<>(activeRules).forEach(rule -> rule.tick(match));
         }, 0L, 1L);
-        return InstallResult.success(null);
+        return ValueResult.empty();
     }
 
     @Override
@@ -72,13 +71,13 @@ public class RuleComp extends MatchComp
     }
 
     @Override
-    public @NonNull ComponentUninstallResult<CustomData> uninstall(@NonNull Match match, CustomData endArg) {
+    public @NonNull ValueResult<CustomData> uninstall(@NonNull Match match, CustomData endArg) {
         if (tickTask != null) {
             tickTask.cancel();
             tickTask = null;
         }
         disableAllRules();
-        return ComponentUninstallResult.success(null);
+        return ValueResult.empty();
     }
 
     /**
@@ -89,12 +88,14 @@ public class RuleComp extends MatchComp
      *
      * @return 启用结果
      */
-    public @NonNull ManagerEnableRuleResult enableRule(@NonNull NamespacedKey ruleId) {
+    public @NonNull OperationResult enableRule(@NonNull NamespacedKey ruleId) {
         RuleEntry<?> getResult = Registry.getInstance().category(Categories.RULE).get(ruleId);
         if (getResult == null) {
-            return new ManagerEnableRuleResult(false, Component.translatable(
-                    TranslateKeys.MatchComp.RULE_COMP_ENABLE_RULE_FAILURE_NOT_FOUND_ID
-            ));
+            // 规则 id 属于服务端参数，只进技术性消息
+            return OperationResult.failure(
+                    TranslateKeys.MatchComp.RULE_COMP_ENABLE_RULE_FAILURE_NOT_FOUND_ID,
+                    "规则未注册：" + ruleId
+            );
         }
         return enableRule(getResult.newInstance());
     }
@@ -105,20 +106,21 @@ public class RuleComp extends MatchComp
      *
      * @param rule 指定规则
      */
-    private @NonNull ManagerEnableRuleResult enableRule(@NonNull MatchRule rule) {
+    private @NonNull OperationResult enableRule(@NonNull MatchRule rule) {
         if (activeRules.contains(rule)) {
-            return new ManagerEnableRuleResult(false, Component.translatable(TranslateKeys.MatchComp.RULE_COMP_ALREADY_ENABLED));
+            return OperationResult.failure(TranslateKeys.MatchComp.RULE_COMP_ALREADY_ENABLED);
         }
-        MatchRule.RuleEnableResult enableResult = rule.onEnable(match);
+        OperationResult enableResult = rule.onEnable(match);
         if (!enableResult.isSuccess()) {
-            return new ManagerEnableRuleResult(false, enableResult.getDisplayMessage());
+            // 规则启用失败：失败信息已是本层形式，原样向上传播
+            return enableResult;
         }
         activeRules.add(rule);
         if (rule instanceof Listener listener) {
             Bukkit.getPluginManager().registerEvents(listener, VoidAirRace.getInstance());
             ruleListeners.put(rule, listener);
         }
-        return ManagerEnableRuleResult.success(null);
+        return OperationResult.success();
     }
 
     /**
@@ -158,20 +160,4 @@ public class RuleComp extends MatchComp
 //                .toList();
 //        record.getComponentData().put("ruleComponent.activeRuleIds", activeRuleIds);
 //    }
-
-    public static class ManagerEnableRuleResult extends OperationResult {
-        /**
-         * 构造一个操作结果
-         *
-         * @param success        操作是否成功，用{@code true}表示成功；用{@code false}表示失败
-         * @param displayMessage 结果消息
-         */
-        public ManagerEnableRuleResult(boolean success, @Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static ManagerEnableRuleResult success(@Nullable Component displayMessage) {
-            return new ManagerEnableRuleResult(true, displayMessage);
-        }
-    }
 }

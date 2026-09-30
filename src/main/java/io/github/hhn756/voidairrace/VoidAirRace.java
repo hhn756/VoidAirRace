@@ -1,8 +1,10 @@
 package io.github.hhn756.voidairrace;
 
-import io.github.hhn756.voidairrace.event.PluginEnableEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.ListenerRegistrar;
+import io.github.hhn756.voidairrace.infrastructure.modules.Module;
+import io.github.hhn756.voidairrace.infrastructure.modules.Modules;
+import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -15,7 +17,7 @@ import java.util.logging.Logger;
 public class VoidAirRace extends JavaPlugin {
     @Override
     public void onEnable() {
-        // 文字画 "VAR"
+        // 文字画 “VAR”
         Logger logger = getLogger();
         logger.info(" __     ___    ____  ");
         logger.info(" \\ \\   / / \\  |  _ \\ ");
@@ -25,11 +27,11 @@ public class VoidAirRace extends JavaPlugin {
 
         instance = this;
 
+        // 加载所有模块
+        Modules.loadAll(ClassScanner.scanSubclasses(Module.class));
+
         // 注册所有 Bukkit 事件监听器
         ListenerRegistrar.RegisterAll(this);
-
-        // 发布插件启用事件
-        new PluginEnableEvent(this).callEvent();
     }
 
     @Override
@@ -38,6 +40,9 @@ public class VoidAirRace extends JavaPlugin {
 
         // 保存内存中的配置
         Config.getInstance().saveAll();
+
+        // 逆加载顺序卸载模块链
+        Modules.unloadAll();
 
         instance = null;
     }

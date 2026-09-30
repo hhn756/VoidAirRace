@@ -1,6 +1,11 @@
-# Gradle
+# Gradle（只忽略构建产物目录，不能写成 build/ —— 会连坐源码包目录 voidairrace/build/）
 /build/
-/.gradle/
+/buildSrc/build/
+.gradle/
+bin/
+
+# 咳特灵（kotlin）
+**/.kotlin/
 
 # IntelliJ IDEA – 忽略整个 .idea，但强制保留共享配置
 /.idea/*

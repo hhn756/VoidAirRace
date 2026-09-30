@@ -1,12 +1,12 @@
-package io.github.hhn756.voidairrace.infrastructure.moduleloader;
+package io.github.hhn756.voidairrace.infrastructure.modules;
 
 import java.util.Collection;
 
 /**
- * 模块接口
- * <p>
- * 实现此接口的类称为“模块”。每个模块类在一次插件启用中只会被实例化一次（单例），
- * 实例由 {@link ModuleLoader} 通过反射调用无参构造器创建
+ * 模块接口，实现此接口的类称为“模块”<br>
+ * 每个模块类在一次插件启用中只会被实例化一次（单例），实例由 {@link Modules} 通过反射调用无参构造器创建<br>
+ * 注：此处的“模块”概念只是为了方便使用{@link Modules}的功能，
+ * 仅在{@link Modules}使用处使用此概念，不代表插件全局范围内通用的“模块”概念
  * <p>
  * 模块实现类还必须满足：
  * <ul>

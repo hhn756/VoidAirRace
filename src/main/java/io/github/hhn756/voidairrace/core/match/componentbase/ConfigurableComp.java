@@ -3,8 +3,7 @@ package io.github.hhn756.voidairrace.core.match.componentbase;
 import io.github.hhn756.voidairrace.core.match.ComponentPriority;
 import io.github.hhn756.voidairrace.core.match.DataKey;
 import io.github.hhn756.voidairrace.core.match.MatchConfig;
-import io.github.hhn756.voidairrace.result.base.ValueResult;
-import net.kyori.adventure.text.Component;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import org.jetbrains.annotations.Range;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -34,31 +33,26 @@ public interface ConfigurableComp<
      *
      * @param expected 调用者在创建比赛配置创建时传入的它期望的配置内容。当此值为{@code null}时推荐回退到{@link ConfigurableComp#createDefaultConfig()}而不是返回失败结果
      *
-     * @return 如果组件添加了自定义配置，那么返回结果的值将是比赛配置数据对象，否则返回结果的值为{@code null}
+     * @return 配置创建结果。约定见{@link ConfigurableComp#createDefaultConfig()}；
+     *         默认实现直接转发{@link ConfigurableComp#createDefaultConfig()}的结果（即忽略预期配置）
      * */
-    default @NonNull CustomConfigResult<CFG> createCustomConfig(@Nullable ECFG expected) {
+    default @NonNull ValueResult<CFG> createCustomConfig(@Nullable ECFG expected) {
         // 默认忽略预期配置
-        return CustomConfigResult.success(createDefaultConfig().getValue());
+        return createDefaultConfig();
     }
 
     /**
-     * 根据当前系统状态（配置、其他模块状态等）创建一个由该组件提供的自定义比赛配置数据对象（简称“默认配置”/“默认比赛配置”）
+     * 根据当前系统状态（配置文件、其他模块状态等）创建一个由该组件提供的自定义比赛配置数据对象（简称“默认配置”/“默认比赛配置”）<br>
+     * 结果约定：
+     * <ul>
+     *     <li>组件实现了本接口即承诺会提供配置数据，成功时用{@link ValueResult#success(Object)}携带配置；
+     *     {@link ValueResult.Empty}仅保留给确实无法提供数据的实现（{@link MatchConfig}会把它按失败处理）；</li>
+     *     <li>失败时返回{@link ValueResult#failure(String)}并携带本层失败原因的翻译键。</li>
+     * </ul>
      *
-     * @return 如果组件添加了自定义配置，那么返回结果的值将是比赛配置数据对象，否则返回结果的值为{@code null}
+     * @return 默认配置创建结果
      * */
-    @NonNull DefaultConfigResult<CFG> createDefaultConfig();
-
-    /**
-     * 检查此组件添加的自定义配置字段的实际值是否合法
-     *
-     * @param config 此组件添加的自定义配置数据类型的实例
-     *
-     * @return 如果配置值合法将返回成功的结果，否则返回失败的结果
-     * */
-    default MatchConfig.@NonNull ValidationConfigResult validateConfig(@NonNull CFG config) {
-        // 默认不检查配置，始终成功
-        return MatchConfig.ValidationConfigResult.success();
-    }
+    @NonNull ValueResult<CFG> createDefaultConfig();
 
     // ------ 操作优先级控制 ------
 
@@ -70,55 +64,5 @@ public interface ConfigurableComp<
      * */
     default @Range(from = 0, to = Integer.MAX_VALUE) int getConfigPriority() {
         return ComponentPriority.NORMAL.getValue();
-    }
-
-    // ------ 结果类型 ------
-
-    /**
-     * 组件创建自定义配置数据对象的结果
-     *
-     * @param <CFG> 组件的自定义配置类型
-     *
-     * @see ConfigurableComp#createCustomConfig(CustomData)
-     * */
-    class CustomConfigResult<CFG extends CustomData> extends ValueResult<CFG> {
-        public CustomConfigResult(
-                boolean success,
-                @Nullable CFG config,
-                @Nullable Component displayMessage
-        ) {
-            super(success, displayMessage, config);
-        }
-
-        public static <CFG extends CustomData> CustomConfigResult<CFG> success(CFG config) {
-            return new CustomConfigResult<>(true, config, null);
-        }
-
-        public static CustomConfigResult<?> failure(Component displayMessage) {
-            return new CustomConfigResult<>(false, null, displayMessage);
-        }
-    }
-
-    /**
-     * 组件创建默认配置（即根据系统状态创建的自定义配置）的结果
-     *
-     * @see ConfigurableComp#createDefaultConfig()
-     * */
-    class DefaultConfigResult<CFG extends CustomData> extends ValueResult<CFG> {
-        public DefaultConfigResult(
-                boolean success,
-                @Nullable CFG config,
-                @Nullable Component displayMessage
-        ) {
-            super(success, displayMessage, config);
-        }
-
-        public static <CFG extends CustomData> DefaultConfigResult<CFG> success(CFG config) {
-            return new DefaultConfigResult<>(true, config, null);
-        }
-
-        public static DefaultConfigResult<CustomData> failure(Component displayMessage) {
-            return new DefaultConfigResult<>(false, null, displayMessage);
-        }
     }
 }

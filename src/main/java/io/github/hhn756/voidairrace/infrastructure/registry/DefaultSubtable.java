@@ -50,19 +50,27 @@ public class DefaultSubtable<I, K> {
         @NonNull C create(@NonNull CategoryId<I, K, C> id);
     }
 
+    /**
+     * 使用子表实例的类别的标识
+     * */
     protected final CategoryId<I, K, ? extends DefaultSubtable<I, K>> id;
 
-    /** 键计算函数，本子表内部行为的组成部分，{@link #add(Object)}用其从注册项派生键 */
+    /**
+     * 键计算函数，本子表内部行为的组成部分，{@link #add(Object)}用其从注册项派生键
+     * */
     protected final Function<I, K> keyFn;
 
-    // 本子表：键 → 注册项
+    /**
+     * 本子表：键 → 注册项
+     */
     protected final Map<K, I> entries = new HashMap<>();
 
     /**
      * 构造子表实例的基类部分，供默认实现及子类链构造使用
      *
-     * @param id    本实例对应的类别标识
-     * @param keyFn 键计算函数；子类若有其他键来源，可在链构造时传入自身的派生策略
+     * @param id    使用子表实例的类别的标识
+     * @param keyFn 键计算函数，用于在注册元素时计算新元素的键。输入{@code I}（表实例的注册项类型）；输出对应注册项的键<br>
+     *              子类若有其他键来源，可在链构造时传入自身的派生策略
      */
     protected DefaultSubtable(
             @NonNull CategoryId<I, K, ? extends DefaultSubtable<I, K>> id,
@@ -73,7 +81,7 @@ public class DefaultSubtable<I, K> {
     }
 
     /**
-     * @return 本实例对应的类别标识
+     * @return 使用子表实例的类别的标识
      */
     public @NonNull CategoryId<I, K, ? extends DefaultSubtable<I, K>> getId() {
         return id;
@@ -82,7 +90,7 @@ public class DefaultSubtable<I, K> {
     /**
      * 注册一项到此子表
      * <p>
-     * <strong>不覆盖</strong>：若类别中已存在键相同的注册项，则保留原注册项，本次传入的注册项不会被注册（不覆盖已有项）
+     * <strong>不覆盖已有项</strong>：若类别中已存在键相同的注册项，则保留原注册项，本次传入的注册项不会被注册
      *
      * @param entry 要注册的注册项
      */

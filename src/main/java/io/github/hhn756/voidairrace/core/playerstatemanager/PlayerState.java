@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 public interface PlayerState {
     /**
      * 获取此状态的标识符<br>
-     * 命名空间表示此状态所属体系，资源路径表示此状态的id
+     * 命名空间（{@link NamespacedKey#getNamespace()}）表示此状态所属体系，键（{@link NamespacedKey#getKey()}）表示此状态的id
      * */
     NamespacedKey getId();
 

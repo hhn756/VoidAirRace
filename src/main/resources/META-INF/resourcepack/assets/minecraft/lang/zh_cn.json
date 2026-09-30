@@ -1,0 +1,142 @@
+{
+  "_": "------ 比赛 ------",
+
+  "void_air_race.match.create.config_is_used": "创建比赛实例失败：配置实例已被使用",
+  "void_air_race.match.start.start_failed_unknown_reasons": "比赛开始失败：未知原因",
+  "void_air_race.match.start.start_failed_specified_reasons": "比赛开始失败：%s",
+  "void_air_race.match.start.instance_is_used": "比赛开始失败：比赛实例已被使用",
+  "void_air_race.match.start.invalid_state": "比赛开始失败：当前比赛状态无效",
+  "void_air_race.match.start.install_failed": "比赛开始失败：安装比赛组件失败",
+  "void_air_race.match.stop.invalid_state": "比赛结束失败：当前比赛状态无效",
+  
+  "void_air_race.match.match_config.create_config.failure_unknown_cause": "创建比赛配置失败：未知原因",
+  "void_air_race.match.match_config.create_config.failure_specified_cause": "创建比赛配置失败：%s",
+  "void_air_race.match.match_config.create_default_config.failure_unknown_cause": "创建默认比赛配置失败：未知原因",
+  "void_air_race.match.match_config.create_default_config.failure_specified_cause": "创建默认比赛配置失败：%s",
+  "void_air_race.match.match_config.init.failure_unknown_cause": "初始化比赛配置失败：未知原因",
+  "void_air_race.match.match_config.init.failure_specified_cause": "初始化比赛配置失败：%s",
+  "void_air_race.match.match_config.load_custom_config.failure_unknown_cause": "加载自定义比赛配置失败：未知原因",
+  "void_air_race.match.match_config.load_custom_config.failure_specified_cause": "加载自定义比赛配置失败：%s",
+  "void_air_race.match.match_config.load_default_config.failure_unknown_cause": "加载默认比赛配置失败：未知原因",
+  "void_air_race.match.match_config.load_default_config.failure_specified_cause": "加载默认比赛配置失败：%s",
+  
+  "void_air_race.match.match_coordinator.start_match.failure_unknown_cause": "协调器开始比赛失败：未知原因",
+  "void_air_race.match.match_coordinator.start_match.failure_specified_cause": "协调器开始比赛失败：%s",
+  "void_air_race.match.match_coordinator.stop_match.invalid_match_state": "协调器结束比赛失败：当前比赛状态无效",
+  "void_air_race.match.match_coordinator.start_match.repeat_start": "协调器开始比赛失败：已有比赛正在进行",
+
+  "void_air_race.base_components.contestant_comp.no_config": "参赛者组件缺少配置数据",
+  "void_air_race.base_components.game_time_comp.invalid_duration": "游戏时间配置无效：时长必须大于 0",
+  "void_air_race.base_components.game_time_comp.no_config": "游戏时间组件缺少配置数据",
+
+  "void_air_race.match_comp.comp_base.default_name": "未命名组件",
+
+  "void_air_race.match_comp.rule_comp.enable_rule.failure.not_found_id": "比赛规则管理组件",
+  "void_air_race.match_comp.rule_comp.already_enabled": "规则已启用，无法重复启用",
+
+  "void_air_race.match_rule.basic_end_determination.description": "当比赛时间归零或存活队伍不足时自动结束比赛",
+  "void_air_race.match_rule.basic_end_determination.display_version": "v1",
+  "void_air_race.match_rule.basic_end_determination.name": "基础结束判定",
+  "void_air_race.match_rule.basic_end_determination.author": "hhn756",
+
+  "void_air_race.match.comp_entry.instantiate.failure": "实例化比赛组件失败",
+
+  "_": "------ 游戏地图 ------",
+
+  "void_air_race.map.create_custom_config.map_not_playable": "指定的地图不可游玩",
+  "void_air_race.map.create_default_config.map_notfound": "未找到指定的地图",
+  "void_air_race.map.create_default_config.map_not_playable": "默认地图不可游玩",
+  "void_air_race.map.map_component.selected_start_failed": "地图组件启动失败",
+  
+  "void_air_race.map.grass_land.name": "草原",
+  "void_air_race.map.grass_land.description_line1": "",
+  "void_air_race.map.grass_land.author1": "hhn756",
+  "void_air_race.map.grass_land.display_version": "v1",
+  "void_air_race.map.grass_land.selected_start.failure_unknown_cause": "草原地图启动失败：未知原因",
+  "void_air_race.map.grass_land.selected_start.failure_specified_cause": "草原地图启动失败：%s",
+  "void_air_race.map.grass_land.find_supply_boxes.load_arena_failure": "寻找补给箱时加载竞技场失败",
+
+  "void_air_race.map.lobby.name": "大厅",
+  "void_air_race.map.lobby.description_line1": "玩家等待与准备的大厅区域",
+  "void_air_race.map.lobby.author1": "hhn756",
+  "void_air_race.map.lobby.display_version": "v1",
+
+  "void_air_race.map.small_town.name": "小镇",
+  "void_air_race.map.small_town.description_line1": "",
+  "void_air_race.map.small_town.author1": "hhn756",
+  "void_air_race.map.small_town.display_version": "v1",
+
+  "_": "------ 服务 ------",
+
+  "void_air_race.arena.arena_manager.no_free_arena": "没有空闲的竞技场可用",
+  "void_air_race.arena.arena_manager.token_is_invalid": "竞技场借据无效",
+  "void_air_race.arena.arena_manager.io_exception": "加载竞技场世界时发生 IO 异常",
+
+  "_": "------ 玩家交互 ------",
+
+  "void_air_race.command.game_map.list.start": "=== 游戏地图列表 ===",
+  "void_air_race.command.game_map.list.playable_map_info": "[可游玩] %s (ID: %s)",
+  "void_air_race.command.game_map.list.not_playable_map_info": "[不可游玩] %s (ID: %s)",
+  "void_air_race.command.game_map.list.end": "=== 列表结束 ===",
+  "void_air_race.command.game_map.reinit.map_not_found": "未找到指定的地图",
+  "void_air_race.command.game_map.reinit.started": "已开始重新初始化地图...",
+  "void_air_race.command.game_map.reinit.ok": "地图 %s 重新初始化完成",
+
+  "void_air_race.command.match_cmd.start.failure": "开始比赛失败",
+  "void_air_race.command.match_cmd.stop.failure": "结束比赛失败",
+  "void_air_race.command.match_cmd.stop.success": "已成功结束比赛",
+  "void_air_race.command.match_cmd.set_map.map_notfound": "未找到 ID 为 %s 的地图",
+  "void_air_race.command.match_cmd.set_map.map_not_playable": "地图 %s 不可游玩",
+  "void_air_race.command.match_cmd.set_map.success": "已将比赛地图设置为 %s (%s)",
+  "void_air_race.command.match_cmd.get_map.success": "当前比赛地图为 %s (%s)",
+
+  "void_air_race.command.game_map.reinit.id_format_error": "地图 ID 格式错误",
+  "void_air_race.command.match_cmd.set_map.id_format_error": "地图 ID 格式错误",
+  "void_air_race.command.match_cmd.get_map.default_map_name": "草原",
+
+  "void_air_race.command.player_manager.init.get.null_player": "未找到名为 %s 的玩家",
+  "void_air_race.command.player_manager.init.get.yes": "玩家 %s 已初始化",
+  "void_air_race.command.player_manager.init.get.no": "玩家 %s 未初始化",
+  "void_air_race.command.player_manager.init.reinit.null_player": "未找到名为 %s 的玩家",
+  "void_air_race.command.player_manager.init.reinit.ok": "已成功重新初始化玩家 %s",
+
+  "void_air_race.audio_visual_services.game_time_bossbar.bossbar_name": "剩余时间：%s 秒",
+  "void_air_race.audio_visual_services.login_message.line1": "%s 加入了游戏",
+  "void_air_race.audio_visual_services.login_message.line1_self": "欢迎加入游戏，%s",
+  "void_air_race.audio_visual_services.match_message.match_started.line1": "=== 比赛开始 ===",
+  "void_air_race.audio_visual_services.match_message.match_started.line2": "当前地图：%s",
+  "void_air_race.audio_visual_services.match_message.match_started.line3": "比赛时长：%s 秒",
+  "void_air_race.audio_visual_services.match_message.match_started.line4": "祝你好运！",
+  "void_air_race.audio_visual_services.match_message.match_over.line1": "=== 比赛结束 ===",
+
+  "_": "------ 配置 ------",
+
+  "void_air_race.config.save_atomic.cant_save": "无法原子化保存配置文件",
+
+  "_": "------ 队伍 ------",
+
+  "void_air_race.team.one.prefix": "[红队] ",
+  "void_air_race.team.one.display_name": "红队",
+  "void_air_race.team.two.prefix": "[绿队] ",
+  "void_air_race.team.two.display_name": "绿队",
+  "void_air_race.team.three.prefix": "[黄队] ",
+  "void_air_race.team.three.display_name": "黄队",
+  "void_air_race.team.four.prefix": "[紫队] ",
+  "void_air_race.team.four.display_name": "紫队",
+  "void_air_race.team.five.prefix": "[粉队] ",
+  "void_air_race.team.five.display_name": "粉队",
+  "void_air_race.team.six.prefix": "[深绿队] ",
+  "void_air_race.team.six.display_name": "深绿队",
+  "void_air_race.team.seven.prefix": "[青队] ",
+  "void_air_race.team.seven.display_name": "青队",
+  "void_air_race.team.eight.prefix": "[蓝队] ",
+  "void_air_race.team.eight.display_name": "蓝队",
+
+  "_": "------ 用户包 ------",
+
+  "void_air_race.addons.game_element_meta.default_element_name": "未命名元素",
+  "void_air_race.addons.usr_package.dir_not_found": "用户包目录不存在",
+  "void_air_race.addons.usr_package.not_a_package": "该目录不是有效的用户包",
+  "void_air_race.addons.usr_package.meta_io_exception": "读取用户包元文件时发生 IO 异常",
+  "void_air_race.addons.usr_package.meta_field_format_error": "用户包元文件字段 %s 格式错误"
+}

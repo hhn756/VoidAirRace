@@ -3,7 +3,8 @@ package io.github.hhn756.voidairrace.core.addons.usrpackage;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.event.UsrPackageLoadEvent;
 import io.github.hhn756.voidairrace.exception.UsrPackageException;
-import io.github.hhn756.voidairrace.result.base.ValueResult;
+import io.github.hhn756.voidairrace.infrastructure.modules.Module;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -12,15 +13,12 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 记录和管理用户包的加载、卸载
  * */
-public class PackageManager {
+public class PackageManager implements Module {
     private static final String PACKAGE_META = "pack.varmeta";
     /** 内部辅助类，代表用户包元文件中的一个字段 */
     private record MetaField(@NonNull String fieldName, @NonNull Class<?> type) {}
@@ -32,11 +30,18 @@ public class PackageManager {
 
     private static @Nullable PackageManager instance;
 
-    static void load() {
-        instance = new PackageManager();
+    @Override
+    public Collection<Class<? extends Module>> getRequiredModules() {
+        return List.of();
     }
 
-    static void unload() {
+    /** 插件启用时执行 */
+    private void onLoad() {
+        instance = this;
+    }
+
+    /** 插件停用时执行 */
+    private void onUnload() {
         instance = null;
     }
 
@@ -59,14 +64,18 @@ public class PackageManager {
      *
      * @param packagePath 用户包根目录路径
      * */
-    public @NonNull LoadPackageResult load(@NonNull Path packagePath) {
-        // 如果目录不存在
-        if (!packagePath.toFile().exists()) return LoadPackageResult.failure(
-                    Component.translatable(TranslateKeys.Addons.USR_PACKAGE_DIR_NOT_FOUND));
+    public @NonNull ValueResult<UsrPackage> load(@NonNull Path packagePath) {
+        // 如果目录不存在（目录路径属于服务端参数，只进技术性消息）
+        if (!packagePath.toFile().exists()) return ValueResult.failure(
+                TranslateKeys.Addons.USR_PACKAGE_DIR_NOT_FOUND,
+                "包目录不存在：" + packagePath
+        );
         // 如果目录不是包
         Path metaPath = packagePath.resolve(PACKAGE_META);
-        if (!metaPath.toFile().exists()) return LoadPackageResult.failure(
-                Component.translatable(TranslateKeys.Addons.USR_PACKAGE_NOT_A_PACKAGE));
+        if (!metaPath.toFile().exists()) return ValueResult.failure(
+                TranslateKeys.Addons.USR_PACKAGE_NOT_A_PACKAGE,
+                "包元文件不存在：" + metaPath
+        );
 
         // 解析元数据
         UsrPackage newPackage = parseMeta(metaPath);
@@ -80,7 +89,7 @@ public class PackageManager {
         // 执行包入口函数
         // TODO ^
 
-        return LoadPackageResult.success(newPackage);
+        return ValueResult.success(newPackage);
     }
 
     /**
@@ -168,21 +177,5 @@ public class PackageManager {
                 Component.translatable(TranslateKeys.Addons.USR_PACKAGE_META_FIELD_FORMAT_ERROR)
                         .arguments(Component.text(fieldName))
         );
-    }
-
-    // ------ 结果类型 ------
-
-    public static class LoadPackageResult extends ValueResult<UsrPackage> {
-        public LoadPackageResult(boolean success, @Nullable Component displayMessage, @Nullable UsrPackage loadedPackage) {
-            super(success, displayMessage, loadedPackage);
-        }
-        
-        public static LoadPackageResult success(@NonNull UsrPackage loadedPackage) {
-            return new LoadPackageResult(true, null, loadedPackage);
-        }
-
-        public static LoadPackageResult failure(@Nullable Component displayMessage) {
-            return  new LoadPackageResult(false, displayMessage, null);
-        }
     }
 }

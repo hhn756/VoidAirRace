@@ -57,7 +57,7 @@ public class Free implements PlayerState, DefaultState, Listener {
     public void onMatchStarted(MatchStartedEvent event) {
         Match match = event.getMatch();
         PlayerStateManager playerStateManager = PlayerStateManager.getInstance();
-        match.getConfigData(ContestantComp.CONFIG_KEY)
+        match.configOf(ContestantComp.CONFIG_KEY)
                 .initialContestants()
                 .forEach(contestant -> {
                     if (!PlayerStateManager.getInstance().onState(contestant, stateId)) return;

@@ -1,45 +1,45 @@
 package io.github.hhn756.voidairrace.playerinteraction.command;
 
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.PermissionNode;
 import io.github.hhn756.voidairrace.core.match.MatchCoordinator;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerInitializer;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerStateManager;
-import io.github.hhn756.voidairrace.core.playerstatemanager.StateRegistry;
-import io.github.hhn756.voidairrace.core.playerstatemanager.StateSystemMeta;
+import io.github.hhn756.voidairrace.core.playerstatemanager.StateSystemEntry;
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
-import io.github.hhn756.voidairrace.event.PluginEnableEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.files.FlagsKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
-import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.AutoRegistration;
+import io.github.hhn756.voidairrace.infrastructure.modules.Module;
+import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.Server;
-import org.bukkit.World;
-import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.Team;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
  * debug 命令，供开发和调试使用
  * */
-@AutoRegistration
-public class DebugCommand implements Listener {
-    @EventHandler(priority = EventPriority.LOW)
-    public void onPluginEnable(PluginEnableEvent event) {
-        event.getMainClass().getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commandsEvent -> {
+public class DebugCommand implements Module {
+    @Override
+    public Collection<Class<? extends Module>> getRequiredModules() {
+        return List.of();
+    }
+
+    /** 插件启用时注册命令 */
+    private void onLoad() {
+        VoidAirRace.getInstance().getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commandsEvent -> {
             LiteralCommandNode<CommandSourceStack> node = Commands.literal("vardebug")
                     .requires(ctx -> ctx.getSender().hasPermission(PermissionNode.DEBUG_COMMAND.toString()))
                     .then(Commands.literal("info")
@@ -83,7 +83,10 @@ public class DebugCommand implements Listener {
                                         server.broadcast(Component.text("------ [服务器信息] ------"));
 
                                         server.broadcast(Component.text("已注册状态体系列表："));
-                                        for (Map.Entry<String, StateSystemMeta> state : StateRegistry.getInstance().getAllSystems().entrySet()) {
+                                        Collection<StateSystemEntry> stateSystems = Registry.getInstance()
+                                                .category(Categories.STATESYSTEM)
+                                                .list();
+                                        for (StateSystemEntry state : stateSystems) {
                                             server.broadcast(Component.text("- " + state.toString()));
                                         }
 
@@ -112,43 +115,13 @@ public class DebugCommand implements Listener {
                                         return 0;
                                     })
                             )
-                    ).then(Commands.literal("temp")
-                            .then(Commands.literal("a")
-                                    .executes(ctx -> {
-                                        if (ctx.getSource().getSender() instanceof Player player) {
-                                            World world = player.getLocation().getWorld();
-                                            if (world.getBlockAt(player.getLocation()).getState() instanceof Chest chest) {
-                                                Server server = Bukkit.getServer();
-
-                                                chest.getInventory().setItem(0, new ItemStack(Material.DIAMOND));
-
-//                                                Entity tempEntity = chest.getLocation().getWorld().spawnEntity(chest.getLocation(), EntityType.MARKER);
-//                                                ItemStack[] items = Bukkit.getLootTable(
-//                                                        new NamespacedKey(Plugin.namespace, "supply/battle/level_b")
-//                                                ).populateLoot(
-//                                                        new Random(),
-//                                                        new LootContext.Builder(chest.getLocation())
-//                                                                .lootedEntity(tempEntity)
-//                                                                .build()
-//                                                ).toArray(new ItemStack[0]);
-//                                                for (ItemStack itemstack : items) {
-//                                                    chest.getInventory().addItem(itemstack);
-//                                                }
-
-                                                server.broadcast(Component.text("已填充物品："));
-                                                server.broadcast(Component.text("-chest_loc: " + chest.getLocation()));
-                                            }
-                                        }
-                                        return 1;
-                                    })
-                            ).then(Commands.literal("b")
-                                    .executes(ctx -> {
-                                        return 1;
-                                    })
-                            )
                     )
                     .build();
             commandsEvent.registrar().register(node);
         });
+    }
+
+    /** 插件停用时执行 */
+    private void onUnload() {
     }
 }

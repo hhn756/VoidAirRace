@@ -9,7 +9,7 @@ import io.github.hhn756.voidairrace.core.map.GameMap;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.map.MapInitializer;
 import io.github.hhn756.voidairrace.core.map.PlayableGameMap;
-import io.github.hhn756.voidairrace.infrastructure.BootstrapModule;
+import io.github.hhn756.voidairrace.infrastructure.modules.BootstrapStage;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -26,7 +26,7 @@ import java.util.Collection;
 /**
  * 游戏地图管理命令
  * */
-public class GameMapCommand implements BootstrapModule {
+public class GameMapCommand implements BootstrapStage {
     public void onBootstrap(@NonNull BootstrapContext context) {
         context.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commandsEvent -> {
             LiteralCommandNode<CommandSourceStack> node = Commands.literal("game_map")

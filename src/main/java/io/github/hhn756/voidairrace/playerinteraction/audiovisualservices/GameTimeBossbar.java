@@ -76,14 +76,14 @@ public class GameTimeBossbar implements Listener {
      * @param match 从此比赛中读取初始比赛时间和剩余比赛时间
      * */
     private void updateBossbar(Match match) {
-        int remainingTime = match.getComp(GameTimeComp.class).getRemaining();
+        int remainingTime = match.comp(GameTimeComp.class).getRemaining();
         bossbar.name(
                 Component.translatable(TranslateKeys.AudioVisualServices.GAME_TIME_BOSSBAR_BOSSBAR_NAME)
                         .arguments(Component.text(remainingTime / 20))
         );
         bossbar.progress(
                 Percentage.toPercentage(
-                        match.getConfigData(GameTimeComp.CONFIG_KEY).duration(),
+                        match.configOf(GameTimeComp.CONFIG_KEY).duration(),
                         remainingTime
                 )
         );

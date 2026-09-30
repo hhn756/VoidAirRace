@@ -28,15 +28,13 @@ public class BasicEndDetermination implements MatchRule, Listener {
     private static final GameElementMeta meta = new GameElementMeta(
             ID,
             List.of(Component.translatable(
-                    TranslateKeys.MatchRule.BASIC_END_DETERMINATION_NAME
-            )),
-            null,
+                    TranslateKeys.MatchRule.BASIC_END_DETERMINATION_NAME)),
             List.of(Component.translatable(
-                    TranslateKeys.MatchRule.BASIC_END_DETERMINATION_AUTHOR
-            )),
+                    TranslateKeys.MatchRule.BASIC_END_DETERMINATION_DESCRIPTION)),
+            List.of(Component.translatable(
+                    TranslateKeys.MatchRule.BASIC_END_DETERMINATION_AUTHOR)),
             Component.translatable(
-                    TranslateKeys.MatchRule.BASIC_END_DETERMINATION_DISPLAY_VERSION
-            ),
+                    TranslateKeys.MatchRule.BASIC_END_DETERMINATION_DISPLAY_VERSION),
             1L,
             null
     );
@@ -44,12 +42,12 @@ public class BasicEndDetermination implements MatchRule, Listener {
     @EventHandler
     public void onMatchStatusChanged(MatchStatusChangedEvent event) {
         Match match = event.getMatch();
-        // 只剩一队 <- 这个优先，应对时间归零同刻击败玩家
-        if (match.getComp(ContestantComp.class).getSurvivingTeamCount() <= 1) {
+        // 只剩一队 <- 这个优先检测，应对时间归零同刻击败玩家
+        if (match.comp(ContestantComp.class).survivingTeamCount() <= 1) {
             MatchCoordinator.getInstance().stopMatch();
         }
         // 时间归零
-        if (match.getComp(GameTimeComp.class).getRemaining() <= 0) {
+        if (match.comp(GameTimeComp.class).getRemaining() <= 0) {
             MatchCoordinator.getInstance().stopMatch();
             return;
         }

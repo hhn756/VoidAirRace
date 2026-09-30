@@ -1,31 +1,24 @@
 package io.github.hhn756.voidairrace.core.playerstatemanager;
 
+import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.PlayerPDCKey;
 import io.github.hhn756.voidairrace.constants.Plugin;
+import io.github.hhn756.voidairrace.infrastructure.modules.Module;
+import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jspecify.annotations.NonNull;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 玩家状态管理器，管理所有玩家的状态，包括状态转移、获取等操作<br>
  * 使用单例模式，用{@link PlayerStateManager#getInstance()}获取实例
  * */
-public class PlayerStateManager {
+public class PlayerStateManager implements Module {
     private static PlayerStateManager instance;
-
-    static void load() {
-        instance = new PlayerStateManager();
-    }
-
-    static void unload() {
-        instance = null;
-    }
 
     public static PlayerStateManager getInstance() {
         if (instance == null) throw new NullPointerException("玩家状态管理器实例不存在");
@@ -36,6 +29,21 @@ public class PlayerStateManager {
 
     private PlayerStateManager() {}
 
+    @Override
+    public Collection<Class<? extends Module>> getRequiredModules() {
+        return List.of(StateRegistrar.class, Registry.class);
+    }
+
+    /** 插件启用时执行 */
+    private void onLoad() {
+        instance = this;
+    }
+
+    /** 插件停用时执行 */
+    private void onUnload() {
+        instance = null;
+    }
+
     /**
      * 将指定玩家在指定状态体系切换到指定状态
      *
@@ -43,16 +51,26 @@ public class PlayerStateManager {
      * @param newState 新状态，自动识别状态所属体系
      * */
     public void toggle(Player player, NamespacedKey newState) {
-        StateRegistry stateRegistry = StateRegistry.getInstance();
+        // 定位新状态所属的状态体系
+        StateSystemEntry system = Registry.getInstance()
+                .category(Categories.STATESYSTEM)
+                .get(newState.getNamespace());
+        if (system == null) throw new IllegalArgumentException(
+                "状态体系 '" + newState.getNamespace() + "' 不存在");
 
         // 调用旧状态切出方法
         NamespacedKey oldState = getState(player, newState.getNamespace());
         if (oldState != null) {
-            stateRegistry.getStateInstance(oldState).onCutout(player);
+            PlayerState oldStateInstance = system.get(oldState);
+            // 旧状态可能来自失效的 PDC 数据，找不到实例时跳过切出
+            if (oldStateInstance != null) oldStateInstance.onCutout(player);
         }
 
         // 调用新状态切入方法
-        stateRegistry.getStateInstance(newState).onCutin(player);
+        PlayerState newStateInstance = system.get(newState);
+        if (newStateInstance == null) throw new IllegalArgumentException(
+                "状态 '" + newState + "' 不存在");
+        newStateInstance.onCutin(player);
 
         // 修改状态。注：将PDC更新放在出入方法后是为了防止出现异常时储存状态和实际状态不一致
         changeStateInPDC(player, newState);

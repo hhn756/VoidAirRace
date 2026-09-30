@@ -5,10 +5,9 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.addons.GameElement;
 import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.core.match.Match;
-import io.github.hhn756.voidairrace.result.base.OperationResult;
+import io.github.hhn756.voidairrace.result.OperationResult;
 import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -42,8 +41,8 @@ public interface MatchRule extends GameElement {
      *
      * @return 如果返回失败的结果那么将会取消这次启用规则操作
      */
-    default @NonNull RuleEnableResult onEnable(@NonNull Match match) {
-        return RuleEnableResult.success();
+    default @NonNull OperationResult onEnable(@NonNull Match match) {
+        return OperationResult.success();
     }
 
     /**
@@ -55,20 +54,4 @@ public interface MatchRule extends GameElement {
      * 规则加载时每游戏刻自动执行一次（注意：避免包含耗时操作）
      */
     default void tick(@NonNull Match match) {}
-
-    // ------ 结果类型 ------
-
-    class RuleEnableResult extends OperationResult {
-        public RuleEnableResult(boolean success, @Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static @NonNull RuleEnableResult success() {
-            return new RuleEnableResult(true, null);
-        }
-
-        public static @NonNull RuleEnableResult failure(@Nullable Component displayMessage) {
-            return new RuleEnableResult(false, displayMessage);
-        }
-    }
 }

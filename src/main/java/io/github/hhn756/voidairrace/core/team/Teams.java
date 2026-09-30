@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import org.jspecify.annotations.NonNull;
 
 /**
  * 定义所有队伍
@@ -19,12 +20,13 @@ public enum Teams {
     SEVEN("seven", NamedTextColor.AQUA, TranslateKeys.Team.SEVEN_PREFIX, TranslateKeys.Team.SEVEN_DISPLAY_NAME),
     EIGHT("eight", NamedTextColor.DARK_BLUE, TranslateKeys.Team.EIGHT_PREFIX, TranslateKeys.Team.EIGHT_DISPLAY_NAME);
 
-    private final String id;
-    private final NamedTextColor color;
-    private final TranslatableComponent prefix;
-    private final TranslatableComponent displayName;
+    private final @NonNull String id;
+    private final @NonNull NamedTextColor color;
+    private final @NonNull TranslatableComponent prefix;
+    private final @NonNull TranslatableComponent displayName;
 
-    Teams(String id, NamedTextColor color, String prefixKey, String displayNameKey) {
+    Teams(@NonNull String id, @NonNull NamedTextColor color,
+          @NonNull String prefixKey, @NonNull String displayNameKey) {
         this.id = id;
         this.color = color;
         prefix = Component.translatable(prefixKey).color(TextColor.color(color()));
@@ -34,28 +36,28 @@ public enum Teams {
     /**
      * @return 队伍id（名称）
      * */
-    public String id() {
+    public @NonNull String id() {
         return id;
     }
 
     /**
      * @return 队伍颜色
      * */
-    public NamedTextColor color() {
+    public @NonNull NamedTextColor color() {
         return color;
     }
 
     /**
      * @return 队伍前缀文本
      * */
-    public TranslatableComponent prefix() {
+    public @NonNull TranslatableComponent prefix() {
         return prefix;
     }
 
     /**
      * @return 队伍的显示名称
      * */
-    public TranslatableComponent displayName() {
+    public @NonNull TranslatableComponent displayName() {
         return displayName;
     }
 }

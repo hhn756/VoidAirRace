@@ -1,9 +1,7 @@
 package io.github.hhn756.voidairrace.core.map;
 
 import io.github.hhn756.voidairrace.core.match.Match;
-import io.github.hhn756.voidairrace.result.base.OperationResult;
-import net.kyori.adventure.text.Component;
-import org.jetbrains.annotations.Nullable;
+import io.github.hhn756.voidairrace.result.OperationResult;
 import org.jetbrains.annotations.Range;
 import org.jspecify.annotations.NonNull;
 
@@ -18,18 +16,20 @@ public abstract class PlayableGameMap extends GameMap {
     public abstract boolean isReady();
 
     /**
-     * 在 使用此地图的比赛 开始时执行
-     * 如果返回的对象{@link StartResult#isSuccess()}返回{@code false}那么会导致地图组件启用失败和比赛开始失败
+     * 在 使用此地图的比赛 开始时执行<br>
+     * 如果返回的结果{@link OperationResult#isSuccess()}返回{@code false}会导致地图组件启用失败和比赛开始失败
+     *
+     * @return 开始结果。失败时携带地图自身给出的原因键，由地图组件与比赛开始流程逐层包装
      * */
-    public @NonNull StartResult start(@NonNull Match match) {
-        return StartResult.success();
+    public @NonNull OperationResult start(@NonNull Match match) {
+        return OperationResult.success();
     }
 
     /**
      * 在 使用此地图的比赛 结束时进行
      * */
-    public @NonNull OverResult over(@NonNull Match match) {
-        return OverResult.success();
+    public @NonNull OperationResult over(@NonNull Match match) {
+        return OperationResult.success();
     };
 
     /**
@@ -40,33 +40,4 @@ public abstract class PlayableGameMap extends GameMap {
     @Range(from = 1, to = Integer.MAX_VALUE)
     public abstract int maxTeams();
 
-    // ------ 结果类型 ------
-
-    public static class StartResult extends OperationResult {
-        public StartResult(boolean success, @Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static StartResult success() {
-            return new StartResult(true, null);
-        }
-
-        public static StartResult failure(@Nullable Component displayMessage) {
-            return new StartResult(false, displayMessage);
-        }
-    }
-
-    public static class OverResult extends OperationResult {
-        public OverResult(boolean success, @Nullable Component displayMessage) {
-            super(success, displayMessage);
-        }
-
-        public static OverResult success() {
-            return new OverResult(true, null);
-        }
-
-        public static OverResult failure(@Nullable Component displayMessage) {
-            return new OverResult(false, displayMessage);
-        }
-    }
 }

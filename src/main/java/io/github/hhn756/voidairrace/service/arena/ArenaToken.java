@@ -1,5 +1,8 @@
 package io.github.hhn756.voidairrace.service.arena;
 
+import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.result.ValueResult;
+import org.bukkit.World;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -39,7 +42,7 @@ public class ArenaToken {
      *
      * @see ArenaManager#returnArena(ArenaToken)
      */
-    public ArenaManager.@NonNull ReturnArenaResult returnArena() {
+    public @NonNull OperationResult returnArena() {
         return arenaManager.returnArena(this);
     }
 
@@ -48,7 +51,7 @@ public class ArenaToken {
      *
      * @see ArenaManager#getTokenWorld(ArenaToken)
      */
-    public ArenaManager.@NonNull GetTokenWorldResult getWorld() {
+    public @NonNull ValueResult<World> getWorld() {
         return arenaManager.getTokenWorld(this);
     }
 
@@ -61,7 +64,7 @@ public class ArenaToken {
      *
      * @see ArenaManager#loadArena(ArenaToken, String)
      */
-    public ArenaManager.@NonNull LoadArenaResult loadArena(String arenaPath) {
+    public @NonNull OperationResult loadArena(String arenaPath) {
         return arenaManager.loadArena(this, arenaPath);
     }
 
@@ -72,7 +75,7 @@ public class ArenaToken {
      *
      * @see ArenaManager#loadArenaWorld(ArenaToken)
      */
-    public ArenaManager.@NonNull LoadArenaResult loadArenaWorld() {
+    public @NonNull OperationResult loadArenaWorld() {
         return arenaManager.loadArenaWorld(this);
     }
 
@@ -83,7 +86,7 @@ public class ArenaToken {
      *
      * @see ArenaManager#unloadArenaWorld(ArenaToken)
      */
-    public ArenaManager.@NonNull UnloadArenaWorldResult unloadArenaWorld() {
+    public @NonNull OperationResult unloadArenaWorld() {
         return arenaManager.unloadArenaWorld(this);
     }
 }

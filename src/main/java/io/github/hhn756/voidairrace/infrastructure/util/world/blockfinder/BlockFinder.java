@@ -1,14 +1,13 @@
 package io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder;
 
+import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.plugin.Plugin;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
@@ -16,14 +15,28 @@ import java.util.function.Predicate;
 /**
  * 在指定区域内搜索符合条件的方块的工具
  */
-public class BlockFinder {
+public class BlockFinder implements Module {
 
     /**
-     * 插件实例，需在插件启用时通过 {@link EventListener} 设置
+     * 插件实例，插件启用时由本模块的 {@code onLoad} 设置
      */
     public static Plugin plugin;
 
     private BlockFinder() {}
+
+    @Override
+    public Collection<Class<? extends Module>> getRequiredModules() {
+        return List.of();
+    }
+
+    /** 插件启用时执行 */
+    private void onLoad() {
+        plugin = VoidAirRace.getInstance();
+    }
+
+    /** 插件停用时执行 */
+    private void onUnload() {
+    }
 
     /**
      * 将区块的 X 坐标和 Z 坐标合并成一个 long 类型的唯一标识符

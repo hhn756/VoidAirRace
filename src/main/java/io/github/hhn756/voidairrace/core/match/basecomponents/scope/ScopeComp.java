@@ -7,6 +7,7 @@ import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.componentbase.CustomData;
 import io.github.hhn756.voidairrace.core.match.componentbase.EndableComp;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
+import io.github.hhn756.voidairrace.result.ValueResult;
 import org.jetbrains.annotations.Range;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -27,7 +28,7 @@ public class ScopeComp extends MatchComp
     }
 
     @Override
-    public @NonNull ComponentUninstallResult<CustomData> uninstall(@NonNull Match match, @Nullable CustomData endArg) {
+    public @NonNull ValueResult<CustomData> uninstall(@NonNull Match match, @Nullable CustomData endArg) {
         Logger logger = VoidAirRace.getInstance().getLogger();
         // 归还所有竞技场
         for (MatchArea area : areas) {
@@ -39,7 +40,7 @@ public class ScopeComp extends MatchComp
             }
         }
         areas.clear();
-        return ComponentUninstallResult.success(null);
+        return ValueResult.empty();
     }
 
     public @Range(from = 0, to = Integer.MAX_VALUE) int getUninstallPriority() {

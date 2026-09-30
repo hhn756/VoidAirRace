@@ -4,7 +4,7 @@ import org.jspecify.annotations.NonNull;
 
 /**
  * 代表组件提供的自定义数据，例如自定义配置、期望配置、开始/结束参数等<br>
- * 需要子类提供实际字段。使用组件的自定义数据时应声明实现类型的变量以访问实际字段
+ * 需要实现类提供实际字段。使用组件的自定义数据时应声明实现类型的变量以访问实际字段
  * */
 public interface CustomData {
     /**
@@ -13,5 +13,5 @@ public interface CustomData {
      *
      * @return 添加此自定义数据类型的组件
      * */
-    @NonNull Class<? extends MatchComp> getSource();
+    @NonNull Class<? extends MatchComp> source();
 }

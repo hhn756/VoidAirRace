@@ -1,5 +1,5 @@
 // 此文件由 Gradle 任务 generateTranslateKeys 生成，请勿手动编辑。
-// 真相源：环境变量 VAR_LANG_FILE 指向的语言文件。
+// 真相源：插件自带资源包中的语言文件。
 package io.github.hhn756.voidairrace.constants;
 
 /**
@@ -59,6 +59,7 @@ public class TranslateKeys {
         public static final String MATCH_CMD_SET_MAP_MAP_NOTFOUND = "void_air_race.command.match_cmd.set_map.map_notfound";
         public static final String MATCH_CMD_SET_MAP_MAP_NOT_PLAYABLE = "void_air_race.command.match_cmd.set_map.map_not_playable";
         public static final String MATCH_CMD_SET_MAP_SUCCESS = "void_air_race.command.match_cmd.set_map.success";
+        public static final String MATCH_CMD_START_FAILURE = "void_air_race.command.match_cmd.start.failure";
         public static final String MATCH_CMD_STOP_FAILURE = "void_air_race.command.match_cmd.stop.failure";
         public static final String MATCH_CMD_STOP_SUCCESS = "void_air_race.command.match_cmd.stop.success";
         public static final String PLAYER_MANAGER_INIT_GET_NO = "void_air_race.command.player_manager.init.get.no";
@@ -70,12 +71,7 @@ public class TranslateKeys {
 
     public static class Config {
         private Config() {}
-        public static final String GET_YML_CONFIG_CANT_CREATE_DIR = "void_air_race.config.get_yml_config.cant_create_dir";
-        public static final String GET_YML_CONFIG_CANT_CREATE_EMPTY_CONFIG = "void_air_race.config.get_yml_config.cant_create_empty_config";
-        public static final String GET_YML_CONFIG_CANT_LOAD = "void_air_race.config.get_yml_config.cant_load";
-        public static final String GET_YML_CONFIG_FILE_CANT_READ = "void_air_race.config.get_yml_config.file_cant_read";
         public static final String SAVE_ATOMIC_CANT_SAVE = "void_air_race.config.save_atomic.cant_save";
-        public static final String SAVE_CANT_SAVE = "void_air_race.config.save.cant_save";
     }
 
     public static class Map {
@@ -132,14 +128,12 @@ public class TranslateKeys {
         public static final String COMP_BASE_DEFAULT_NAME = "void_air_race.match_comp.comp_base.default_name";
         public static final String RULE_COMP_ALREADY_ENABLED = "void_air_race.match_comp.rule_comp.already_enabled";
         public static final String RULE_COMP_ENABLE_RULE_FAILURE_NOT_FOUND_ID = "void_air_race.match_comp.rule_comp.enable_rule.failure.not_found_id";
-        public static final String RULE_COMP_NAME = "void_air_race.match_comp.rule_comp.name";
     }
 
     public static class MatchRule {
         private MatchRule() {}
         public static final String BASIC_END_DETERMINATION_AUTHOR = "void_air_race.match_rule.basic_end_determination.author";
         public static final String BASIC_END_DETERMINATION_DESCRIPTION = "void_air_race.match_rule.basic_end_determination.description";
-        public static final String BASIC_END_DETERMINATION_DISPLAY_NAME = "void_air_race.match_rule.basic_end_determination.display_name";
         public static final String BASIC_END_DETERMINATION_DISPLAY_VERSION = "void_air_race.match_rule.basic_end_determination.display_version";
         public static final String BASIC_END_DETERMINATION_NAME = "void_air_race.match_rule.basic_end_determination.name";
     }
