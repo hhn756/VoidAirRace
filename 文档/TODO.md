@@ -4,7 +4,7 @@
 
 先实现业务功能会导致以后需要再规范代码
 
-## [完成]统一注册表（1.）、[待开始]完善用户包机制（2.）
+## [完成]统一注册表（1.）、[进行中]完善用户包机制（2.）
 
 这两个步骤部分有交叉
 
@@ -32,8 +32,12 @@
 比赛过程中任何**可介入比赛的存在**都可以通过比赛对象的实例方法**将自己的数据添加到比赛记录**中<br>
 比赛记录通过分模块的记录段实现隔离不同模块的记录数据
 
+## [完成]统一配置字段定义方式（4）
+
+资源中的配置文件仅用于提供默认值，已将默认值与注释迁入字段定义对象（`io.github.hhn756.voidairrace.infrastructure.config.ConfigKey`，新增 `defaultValue` 与 `comment`）：配置文件缺失时由键定义逐键物化生成，已有文件缺失键时补齐后保存重载；资源内三份默认 yml（flags/game_settings/global_settings）已删除，`global_settings.yml` 保持懒加载语义（首次被读取时才物化）
+
 ## 其他
 
-4. [完成]事件优先级控制初始化改成DI<br>全部启动链（config、registry、schedulingutil、blockfinder、map、usrpackage、team、playerstatemanager、match、arena、lobby、debug命令）已改为 `Modules`（原 ModuleLoader）模块，加载顺序由前置声明 + 拓扑排序决定；`PluginEnableEvent` 的排序职责终结，事件类已删除。依赖图见 `文档/依赖图.md`
-5. [完成]结果类型区分”技术性消息”（详细，可包含服务端参数；禁止发送给玩家）和“用户消息”（不详细，禁止包含服务端参数）
-6. [完成]增加编译期扫描类的工具提升启动速度
+5. [完成]事件优先级控制初始化改成DI<br>全部启动链（config、registry、schedulingutil、blockfinder、map、usrpackage、team、playerstatemanager、match、arena、lobby、debug命令）已改为 `Modules`（原 ModuleLoader）模块，加载顺序由前置声明 + 拓扑排序决定；`PluginEnableEvent` 的排序职责终结，事件类已删除。依赖图见 `文档/依赖图.md`
+6. [完成]结果类型区分”技术性消息”（详细，可包含服务端参数；禁止发送给玩家）和“用户消息”（不详细，禁止包含服务端参数）
+7. [完成]增加编译期扫描类的工具提升启动速度

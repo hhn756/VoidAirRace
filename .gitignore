@@ -1,4 +1,4 @@
-# Gradle（只忽略构建产物目录，不能写成 build/ —— 会连坐源码包目录 voidairrace/build/）
+# Gradle（只忽略构建产物目录，不能写成 build/，不然会包含 buildSrc/build 任务源码）
 /build/
 /buildSrc/build/
 .gradle/
@@ -25,6 +25,10 @@ bin/
 
 # Mac OS
 .DS_Store
+
+# trae
+
+.trae/
 
 # 通用输出目录
 /out/

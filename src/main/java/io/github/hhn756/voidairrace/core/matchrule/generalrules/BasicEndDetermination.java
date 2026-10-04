@@ -25,7 +25,7 @@ import java.util.List;
 public class BasicEndDetermination implements MatchRule, Listener {
     public static final NamespacedKey ID = Plugin.key("basic_end_determination");
     private static final Collection<String> tags = new ArrayList<>();
-    private static final GameElementMeta meta = new GameElementMeta(
+    public static final GameElementMeta meta = new GameElementMeta(
             ID,
             List.of(Component.translatable(
                     TranslateKeys.MatchRule.BASIC_END_DETERMINATION_NAME)),

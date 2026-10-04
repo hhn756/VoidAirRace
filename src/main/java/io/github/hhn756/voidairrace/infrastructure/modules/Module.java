@@ -15,9 +15,10 @@ import java.util.Collection;
  *       与恰好一个 {@code private void onUnload(...)}</li>
  * </ul>
  * <p>
- * {@code onLoad} / {@code onUnload} 的参数列表任意，但每个参数的类型必须是本模块某个前置模块
- * 类型的父类或接口；加载器会把对应的已实例化前置模块作为实参传入。借此把“前置关系”与
- * “实际依赖的参数”分离：声明为前置只用于确定加载顺序，方法签名才决定注入哪些实例
+ * {@code onLoad} / {@code onUnload} 的参数列表任意，但每个参数的类型必须是本模块某个前置模块类型的父类或接口
+ * <p>
+ * {@link Modules}会把对应的已实例化前置模块作为实参传入<br>
+ * 借此把“前置关系”与“实际依赖的参数”分离：声明为前置只用于确定加载顺序，方法签名才决定注入哪些实例
  * */
 public interface Module {
     /**

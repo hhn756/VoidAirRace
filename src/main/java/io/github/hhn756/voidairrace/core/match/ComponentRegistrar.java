@@ -29,9 +29,8 @@ public class ComponentRegistrar implements Module {
         registerComponents();
     }
 
-    /** 插件停用时执行 */
-    private void onUnload() {
-    }
+    /** 插件禁用时执行 */
+    private void onUnload() {}
 
     /**
      * 添加“比赛组件”注册项类别，然后扫描并注册插件中所有比赛组件实现类

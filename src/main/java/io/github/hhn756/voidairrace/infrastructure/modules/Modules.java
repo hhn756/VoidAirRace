@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  *   <li>引导阶段任务（{@link BootstrapStage}）：{@link #bootstrapAll(BootstrapContext)} 由 {@code Bootstrap}
  *       在插件引导阶段调用，扫描全部实现类并逐个执行一次 {@code onBootstrap}，无卸载概念</li>
  *   <li>普通模块（{@link Module}）：{@link #loadAll(Collection)} 在插件启用时调用，按前置声明拓扑排序加载；
- *       {@link #unloadAll()} 在插件停用时逆序卸载</li>
+ *       {@link #unloadAll()} 在插件禁用时逆序卸载</li>
  * </ul>
  * 供非模块代码获取普通模块单例的方法是 {@link #getModule(Class)}
  *
@@ -170,7 +170,7 @@ public final class Modules {
         if (moduleClass == null) throw new IllegalStateException("moduleClass 为 null");
         Module instance = INSTANCES.get(moduleClass);
         if (instance == null) {
-            throw new IllegalStateException("模块 " + display(moduleClass) + " 未加载：不在本次插件启用的模块列表中，或已随插件停用卸载");
+            throw new IllegalStateException("模块 " + display(moduleClass) + " 未加载：不在本次插件启用的模块列表中，或已随插件禁用卸载");
         }
         return moduleClass.cast(instance);
     }

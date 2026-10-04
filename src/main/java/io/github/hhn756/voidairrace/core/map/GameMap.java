@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 游戏地图的基类<br>
- * 定义了获取地图基本信息和控制地图初始化的方法
+ * 定义了获取地图基本信息和地图初始化等方法
  * */
 public abstract class GameMap implements GameElement {
     /**
