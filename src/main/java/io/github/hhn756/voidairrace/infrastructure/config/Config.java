@@ -1,7 +1,6 @@
 package io.github.hhn756.voidairrace.infrastructure.config;
 
 import io.github.hhn756.voidairrace.VoidAirRace;
-import io.github.hhn756.voidairrace.constants.ResourcePath;
 import io.github.hhn756.voidairrace.exception.ConfigException;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -9,10 +8,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +32,7 @@ public class Config implements Module {
         instance = this;
     }
 
-    /** 插件停用时执行 */
+    /** 插件禁用时执行 */
     private void onUnload() {
         instance = null;
     }
@@ -131,7 +126,7 @@ public class Config implements Module {
 
     /**
      * 获取指定配置文件的可观察实例<br>
-     * 如果配置文件尚未加载，则会从磁盘加载；若文件不存在，则尝试从JAR复制默认配置或创建空文件<br>
+     * 如果配置文件尚未加载，则会从磁盘加载；若文件不存在，则由配置键定义物化生成默认配置文件<br>
      * 实例类型由定义对象中记录的实现类型（{@code IMPL}）决定，并据此分发到对应的加载器
      *
      * @param configDefinition 要读取的配置文件的定义对象
@@ -169,14 +164,9 @@ public class Config implements Module {
                 Level.SEVERE,
                 "无法创建插件配置目录: " + parentDir.getAbsolutePath());
 
-        // 确保配置文件存在
+        // 确保配置文件存在：由配置键定义物化生成（默认值的唯一真相源是键定义）
         if (!dataSourceFile.isFile()) {
-            // 如果不存在，尝试从 jar 复制默认配置
-            if (!copyDefaultFromJar(definedPath, dataSourceFile)) {
-                // jar 中不存在，创建空文件
-                logger.warning("jar 中不存在默认配置文件 " + definedPath + "，将尝试创建空文件");
-                createEmptyYmlFile(dataSourceFile);
-            }
+            materializeDefaultFile(configDefinition, dataSourceFile);
         }
 
         // 检查文件是否可读
@@ -202,8 +192,15 @@ public class Config implements Module {
         } catch (Exception e) {
             logAndThrow(Level.SEVERE, "无法加载配置文件 “" + configDefinition.filePath() + "”");
         }
-        // 防止配置不全
-        mergeDefaults(configDefinition, ymlConfig);
+        // 防止配置不全：为缺失键补默认值；发生补齐时保存并重载，使值类型转换与注释处理走与正常加载一致的路径
+        if (fillMissingKeys(configDefinition, ymlConfig)) {
+            try {
+                ymlConfig.save(dataSource);
+                ymlConfig.load(dataSource);
+            } catch (Exception e) {
+                logAndThrow(Level.SEVERE, "补齐配置文件 '" + configDefinition.filePath() + "' 缺失字段后保存或重载失败");
+            }
+        }
 
         // 记录
         configs.put(configDefinition.filePath(), ymlConfig);
@@ -222,95 +219,51 @@ public class Config implements Module {
     }
 
     /**
-     * 从 jar 中复制默认配置文件到磁盘<br>
-     * 默认配置在 jar 内位于 {@link ResourcePath#META_INF} 下，不能用
-     * {@code saveResource}（会按 jar 内相对路径写到 {@code 数据目录/META-INF/} 下）
+     * 由配置键定义物化默认配置文件：逐键写入默认值与注释<br>
+     * 默认值的唯一真相源是键定义（{@link ConfigKey}），不手工维护默认配置文件
      *
-     * @param definedPath 配置定义路径（不含扩展名）
-     * @param target      目标文件
+     * @param definition 配置文件的定义对象
+     * @param target     目标文件（此时不存在）
      *
-     * @return jar 中存在默认配置并复制成功时 true；jar 中不存在时 false
-     *
-     * @throws ConfigException 复制过程 IO 失败时抛出
+     * @throws ConfigException 写文件失败时抛出
      */
-    private boolean copyDefaultFromJar(@NonNull String definedPath, @NonNull File target) throws ConfigException {
-        String resourceName = ResourcePath.META_INF + definedPath + ".yml";
-        try (InputStream in = VoidAirRace.class.getClassLoader().getResourceAsStream(resourceName)) {
-            if (in == null) return false;
-            Files.copy(in, target.toPath());
-            return true;
+    private void materializeDefaultFile(@NonNull ConfigDefinition<?> definition, @NonNull File target)
+            throws ConfigException {
+        YamlConfiguration defaults = new YamlConfiguration();
+        for (ConfigKey<?> key : definition.keys()) {
+            Object def = key.defaultValue();
+            if (def == null) continue;
+            defaults.set(key.path(), def);
+            if (key.comment() != null) defaults.setComments(key.path(), List.of(key.comment()));
+        }
+        try {
+            defaults.save(target);
         } catch (IOException e) {
-            String msg = "从 jar 复制默认配置文件 '" + resourceName + "' 到 '"
-                    + target.getAbsolutePath() + "' 失败";
+            String msg = "由配置键定义生成默认配置文件 '" + target.getAbsolutePath() + "' 失败";
             logger.log(Level.SEVERE, msg, e);
             throw new ConfigException(msg, e, null);
         }
     }
 
     /**
-     * 创建空配置文件，支持重试和详细日志
+     * 为已存在的配置文件补充缺失的键：写入键的默认值与注释<br>
+     * 用于插件升级后新增配置键的场景
      *
-     * @param osFile 目标文件
-     */
-    private void createEmptyYmlFile(File osFile) {
-        int maxRetries = 3;
-        String absolutePath = osFile.getAbsolutePath();
-        for (int n = 1; n <= maxRetries; n++) {
-            try {
-                if (osFile.createNewFile()) return;
-
-                // 防止无用尝试
-                if (osFile.isDirectory()) {
-                    String msg = "尝试创建空配置文件失败，路径被目录占用: " + absolutePath;
-                    logger.severe(msg);
-                    throw new ConfigException(msg, null);
-                } else {
-                    String msg = "尝试创建空配置文件失败，路径被其他项目占用： " + absolutePath;
-                    logger.severe(msg);
-                    throw new ConfigException(msg, null);
-                }
-            } catch (IOException e) {
-                logger.warning("第 " + n + " 次尝试创建空配置文件 “" + absolutePath + "”时出现异常: " + e.getMessage());
-            }
-        }
-        String msg = "尝试了 "+ maxRetries + "次创建空配置文件 “" + absolutePath + "”，都失败了，请检查目录权限等可能因素";
-        logger.severe(msg);
-        throw new ConfigException(msg, null);
-    }
-
-    /**
-     * 将插件 jar 中的默认配置 A 融合到配置对象 B 中<br>
-     * 此方法针对且仅支持{@link YamlConfig}配置实现
-     * <p>
-     * 具体来说：遍历 A 中的所有字段，如果字段不存在于 B 中，则将其复制到 B
+     * @param definition 配置文件的定义对象
+     * @param target     已加载到内存的配置对象
      *
-     * @param source 复制字段的源，默认配置（A）
-     * @param target 复制字段的目标，配置对象（B）
-     */
-    private void mergeDefaults(ConfigDefinition<?> source, YamlConfig target) throws ConfigException {
-        String resourceName = ResourcePath.META_INF + source.filePath() + ".yml";
-        try (InputStream in = VoidAirRace.class.getClassLoader().getResourceAsStream(resourceName)) {
-            if (in == null) {
-                logger.warning("jar 中未找到默认配置文件: “" + resourceName + "”，无法为其补充缺失字段");
-                return;
-            }
-
-            // 读取 JAR 中的默认配置
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(in, StandardCharsets.UTF_8)
-            );
-
-            // 遍历默认配置的所有键（包括嵌套键）
-            for (String key : defaultConfig.getKeys(true)) {
-                if (!target.contains(key)) {
-                    target.set(key, defaultConfig.get(key));
-                    logger.fine("自动为配置文件 '" + source.filePath() + "' 补充缺失字段: " + key);
-                }
-            }
-        } catch (Exception e) {
-            String msg = "读取默认配置文件 '" + resourceName + "' 时发生错误：";
-            logger.log(Level.WARNING, msg, e);
-            throw new ConfigException(msg, null);
+     * @return 是否发生过补齐；调用方应保存并重载配置
+     * */
+    private boolean fillMissingKeys(@NonNull ConfigDefinition<?> definition, @NonNull YamlConfig target) {
+        boolean filled = false;
+        for (ConfigKey<?> key : definition.keys()) {
+            if (target.contains(key.path())) continue;
+            Object def = key.defaultValue();
+            if (def == null) continue;
+            target.set(key.path(), def);
+            if (key.comment() != null) target.setComments(key.path(), List.of(key.comment()));
+            filled = true;
         }
+        return filled;
     }
 }

@@ -11,10 +11,16 @@ public class TranslateKeys {
     public static class Addons {
         private Addons() {}
         public static final String GAME_ELEMENT_META_DEFAULT_ELEMENT_NAME = "void_air_race.addons.game_element_meta.default_element_name";
+        public static final String USR_PACKAGE_API_VERSION_UNSUPPORTED = "void_air_race.addons.usr_package.api_version_unsupported";
         public static final String USR_PACKAGE_DIR_NOT_FOUND = "void_air_race.addons.usr_package.dir_not_found";
+        public static final String USR_PACKAGE_ENTRY_SCRIPT_FAILED = "void_air_race.addons.usr_package.entry_script_failed";
+        public static final String USR_PACKAGE_ENTRY_SCRIPT_IO_ERROR = "void_air_race.addons.usr_package.entry_script_io_error";
+        public static final String USR_PACKAGE_ID_DUPLICATE = "void_air_race.addons.usr_package.id_duplicate";
         public static final String USR_PACKAGE_META_FIELD_FORMAT_ERROR = "void_air_race.addons.usr_package.meta_field_format_error";
         public static final String USR_PACKAGE_META_IO_EXCEPTION = "void_air_race.addons.usr_package.meta_io_exception";
+        public static final String USR_PACKAGE_META_SIZE_ERROR = "void_air_race.addons.usr_package.meta_size_error";
         public static final String USR_PACKAGE_NOT_A_PACKAGE = "void_air_race.addons.usr_package.not_a_package";
+        public static final String USR_PACKAGE_PACKAGE_NOT_ENABLED = "void_air_race.addons.usr_package.package_not_enabled";
     }
 
     public static class Arena {
@@ -136,6 +142,7 @@ public class TranslateKeys {
         public static final String BASIC_END_DETERMINATION_DESCRIPTION = "void_air_race.match_rule.basic_end_determination.description";
         public static final String BASIC_END_DETERMINATION_DISPLAY_VERSION = "void_air_race.match_rule.basic_end_determination.display_version";
         public static final String BASIC_END_DETERMINATION_NAME = "void_air_race.match_rule.basic_end_determination.name";
+        public static final String USER_RULE_ON_ENABLE_FAILED = "void_air_race.match_rule.user_rule.on_enable_failed";
     }
 
     public static class Team {

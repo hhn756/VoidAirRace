@@ -11,7 +11,7 @@ import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
 
 /**
- * 插件内所有注册项类别的标识<br>
+ * 插件内所有公共注册项类别的标识（模块仅在内部用到注册表功能无需在此添加类别）<br>
  * 调用{@link io.github.hhn756.voidairrace.infrastructure.registry.Registry#category(CategoryId)}
  * 获取子表时以这些常量指定目标类别
  * <p>

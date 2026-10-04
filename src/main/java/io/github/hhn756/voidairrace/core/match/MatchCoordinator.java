@@ -35,7 +35,7 @@ public class MatchCoordinator implements Module {
         checkMatchAbort();
     }
 
-    /** 插件停用时执行 */
+    /** 插件禁用时执行 */
     private void onUnload() {
         instance = null;
     }

@@ -39,6 +39,8 @@
   "void_air_race.match_rule.basic_end_determination.name": "基础结束判定",
   "void_air_race.match_rule.basic_end_determination.author": "hhn756",
 
+  "void_air_race.match_rule.user_rule.on_enable_failed": "用户规则启用失败",
+
   "void_air_race.match.comp_entry.instantiate.failure": "实例化比赛组件失败",
 
   "_": "------ 游戏地图 ------",
@@ -103,11 +105,11 @@
   "void_air_race.audio_visual_services.game_time_bossbar.bossbar_name": "剩余时间：%s 秒",
   "void_air_race.audio_visual_services.login_message.line1": "%s 加入了游戏",
   "void_air_race.audio_visual_services.login_message.line1_self": "欢迎加入游戏，%s",
-  "void_air_race.audio_visual_services.match_message.match_started.line1": "=== 比赛开始 ===",
+  "void_air_race.audio_visual_services.match_message.match_started.line1": "========= 比赛开始 =========",
   "void_air_race.audio_visual_services.match_message.match_started.line2": "当前地图：%s",
   "void_air_race.audio_visual_services.match_message.match_started.line3": "比赛时长：%s 秒",
   "void_air_race.audio_visual_services.match_message.match_started.line4": "祝你好运！",
-  "void_air_race.audio_visual_services.match_message.match_over.line1": "=== 比赛结束 ===",
+  "void_air_race.audio_visual_services.match_message.match_over.line1": "========= 比赛结束 =========",
 
   "_": "------ 配置 ------",
 
@@ -138,5 +140,11 @@
   "void_air_race.addons.usr_package.dir_not_found": "用户包目录不存在",
   "void_air_race.addons.usr_package.not_a_package": "该目录不是有效的用户包",
   "void_air_race.addons.usr_package.meta_io_exception": "读取用户包元文件时发生 IO 异常",
-  "void_air_race.addons.usr_package.meta_field_format_error": "用户包元文件字段 %s 格式错误"
+  "void_air_race.addons.usr_package.meta_field_format_error": "用户包元文件字段 %s 格式错误",
+  "void_air_race.addons.usr_package.meta_size_error": "用户包元文件字段数量错误",
+  "void_air_race.addons.usr_package.id_duplicate": "用户包 Id %s 已被其他用户包占用",
+  "void_air_race.addons.usr_package.api_version_unsupported": "用户包 %s 要求的插件 API 版本不受支持，这意味着此用户包不匹配当前版本的游戏插件",
+  "void_air_race.addons.usr_package.entry_script_failed": "用户包入口脚本执行失败",
+  "void_air_race.addons.usr_package.entry_script_io_error": "读取用户包入口脚本时发生 IO 异常",
+  "void_air_race.addons.usr_package.package_not_enabled": "用户包 %s 未启用"
 }

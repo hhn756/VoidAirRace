@@ -14,6 +14,7 @@ repositories {
         name = "papermc"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
+    mavenCentral()
 }
 
 dependencies {
@@ -25,6 +26,12 @@ dependencies {
     implementation(files("libs/rembulan/rembulan-compiler-0.4.2.jar"))
     implementation(files("libs/rembulan/rembulan-runtime-0.4.2.jar"))
     implementation(files("libs/rembulan/rembulan-stdlib-0.4.2.jar"))
+    // ASM（字节码生成库）—— rembulan-compiler 编译 Lua 时运行期需要（缺它时编译能过、运行报 NoClassDefFoundError）
+    // 许可证：3-Clause BSD（https://asm.ow2.io/license.html）
+    implementation("org.ow2.asm:asm:6.2")
+    implementation("org.ow2.asm:asm-tree:6.2")
+    implementation("org.ow2.asm:asm-analysis:6.2")
+    implementation("org.ow2.asm:asm-util:6.2")
 }
 
 configurations.all {

@@ -11,7 +11,7 @@ import org.jspecify.annotations.NonNull;
  * */
 public abstract class PlayableGameMap extends GameMap {
     /**
-     * 检测地图是否已准备好开始游戏
+     * @return 地图是否已准备好开始游戏
      * */
     public abstract boolean isReady();
 
@@ -33,11 +33,8 @@ public abstract class PlayableGameMap extends GameMap {
     };
 
     /**
-     * 获取地图允许参赛的最大队伍数量
-     *
-     * @return 最大队伍数量
+     * @return 地图允许参赛的最大队伍数量
      * */
     @Range(from = 1, to = Integer.MAX_VALUE)
     public abstract int maxTeams();
-
 }
