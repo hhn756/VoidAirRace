@@ -1,4 +1,4 @@
-package io.github.hhn756.voidairrace.core.addons.usrpackage.script;
+package io.github.hhn756.voidairrace.core.addons.usrpackage.script.api;
 
 import io.github.hhn756.voidairrace.core.addons.usrpackage.UsrPackage;
 import net.sandius.rembulan.ByteString;
@@ -31,15 +31,16 @@ import java.util.function.Function;
  * 模块名与缓存的约定（见文档“用户包”）：
  * <ul>
  *     <li>相对路径：解析到<strong>本包</strong>的{@code /scripts/}下</li>
- *     <li>{@code pkgid:path} 形式：解析到对应包的{@code /scripts/}下，即跨包引用</li>
+ *     <li>{@code pkgid:path} 形式：解析到对应包的{@code /scripts/}下，即跨包引用；
+ *         路径语法与跨包依赖白名单统一经{@link PackageAccess}裁定</li>
  *     <li>函数缓存（{@code fnCache}）键为{@code pkgid:path}，全服唯一：同一模块全服只编译一次，
- *         其运行环境绑定<strong>所属包</strong>的环境（模块内的全局量属于所属包）</li>
+ *         其全局环境（{@code _ENV}）绑定<strong>所属包</strong>的环境表（模块内的全局量属于所属包）</li>
  *     <li>执行缓存（{@code loaded}）每包一份，记录模块的<strong>执行结果</strong>：
  *         同一包内重复 require 直接取缓存；循环依赖期间以{@code true}占位防重入</li>
  * </ul>
  * 本类非线程安全（调用全部发生在主线程）
  * */
-final class PackageRequire {
+public final class PackageRequire {
 
     private PackageRequire() {}
 
@@ -53,7 +54,7 @@ final class PackageRequire {
      * @param envs     包 Id → 已加载包环境的记录表，供跨包 require 查询目标包环境
      * @param fnCache  模块缓存键 → 已编译函数的缓存表，跨包共享
      * */
-    static void install(
+    public static void install(
             @NonNull CompilerChunkLoader loader,
             @NonNull Table env,
             @NonNull UsrPackage owner,
@@ -152,50 +153,37 @@ final class PackageRequire {
          * 编译指定缓存键的模块并返回其主函数；命中函数缓存时直接返回缓存
          * */
         private @NonNull LuaFunction compileModule(@NonNull String cacheKey) {
-            String pkgId;
-            String relPath;
+            // 缓存键恒为 pkgid:path 形态（canonicalKey 已保证），拆出包 Id 供环境定位
             int separator = cacheKey.indexOf(':');
-            if (separator >= 0) {
-                pkgId = cacheKey.substring(0, separator);
-                relPath = cacheKey.substring(separator + 1);
-            } else {
-                pkgId = owner.id();
-                relPath = cacheKey;
+            if (separator < 0) {
+                throw new IllegalStateException("模块缓存键缺少包 Id 前缀：" + cacheKey);
             }
+            String pkgId = cacheKey.substring(0, separator);
             if (pkgId.isBlank()) throw new LuaRuntimeException("require 的包 Id 不能为空：" + cacheKey);
 
-            String normalizedPath = normalizeScriptPath(relPath, cacheKey);
             LuaFunction cached = fnCache.get(cacheKey);
             if (cached != null) return cached;
 
-            // 定位所属包与其脚本目录：本包经直连引用取环境，其他包经解析函数与记录表查找
-            Table env;
-            Path scriptsDir;
-            if (pkgId.equals(owner.id())) {
-                env = ownerEnv;
-                scriptsDir = owner.root().path().resolve("scripts");
-            } else {
-                UsrPackage target = resolver.apply(pkgId);
-                if (target == null) throw new LuaRuntimeException("require 引用了未加载的用户包：" + pkgId);
-                env = envs.get(pkgId);
-                if (env == null) throw new LuaRuntimeException("用户包缺少脚本环境：" + pkgId);
-                scriptsDir = target.root().path().resolve("scripts");
-            }
-
-            // 定位脚本文件：resolve 后 normalize 并确认仍在脚本目录内（zip-slip 防护）
-            Path scriptPath = scriptsDir.resolve(normalizedPath).normalize();
-            if (!scriptPath.startsWith(scriptsDir)) {
-                throw new LuaRuntimeException("require 的脚本路径越出包脚本目录：" + cacheKey);
-            }
+            // 路径语法与跨包依赖白名单经统一入口裁定；relPath 语法上不可能越出包根，解析无需防护
+            PackageAccess.Target target = PackageAccess.resolve(owner, cacheKey, resolver);
+            Path scriptsDir = target.pkg().scriptsDirectory();
+            Path scriptPath = scriptsDir.resolve(target.relPath());
             if (!Files.isRegularFile(scriptPath)) {
                 throw new LuaRuntimeException("require 找不到脚本文件：" + cacheKey);
             }
 
-            String source;
-            try {
-                source = Files.readString(scriptPath, StandardCharsets.UTF_8);
-            } catch (Exception e) {
-                throw new LuaRuntimeException("读取脚本文件失败：" + cacheKey + "（" + e.getMessage() + "）");
+            String source = new String(
+                    PackageAccess.readBytes(scriptPath, cacheKey, PackageAccess.MAX_FILE_BYTES),
+                    StandardCharsets.UTF_8
+            );
+
+            // 模块全局环境绑定所属包：本包直连环境；其他包经记录表查找（resolve 已确保包加载成功，缺失即内部状态错误）
+            Table env;
+            if (pkgId.equals(owner.id())) {
+                env = ownerEnv;
+            } else {
+                env = envs.get(pkgId);
+                if (env == null) throw new LuaRuntimeException("用户包缺少脚本环境：" + pkgId);
             }
 
             LuaFunction fn;
@@ -206,17 +194,6 @@ final class PackageRequire {
             }
             fnCache.put(cacheKey, fn);
             return fn;
-        }
-
-        /**
-         * 校验并规整脚本相对路径：禁止越目录与绝对路径，缺省补{@code .lua}后缀
-         * */
-        private static @NonNull String normalizeScriptPath(@NonNull String relPath, @NonNull String original) {
-            if (relPath.isBlank() || relPath.contains("..") || relPath.contains("\\")
-                    || relPath.startsWith("/") || relPath.endsWith("/")) {
-                throw new LuaRuntimeException("require 的脚本路径非法：" + original);
-            }
-            return relPath.endsWith(".lua") ? relPath : relPath + ".lua";
         }
 
         /**

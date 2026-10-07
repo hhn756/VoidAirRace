@@ -26,7 +26,8 @@ public class Lobby extends GameMap implements Listener {
             ),
             Component.translatable(TranslateKeys.Map.LOBBY_DISPLAY_VERSION),
             1L,
-            null
+            List.of(),
+            List.of()
     );
 
     @Override

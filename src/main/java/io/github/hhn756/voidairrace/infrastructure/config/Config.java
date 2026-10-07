@@ -32,8 +32,9 @@ public class Config implements Module {
         instance = this;
     }
 
-    /** 插件禁用时执行 */
+    /** 插件禁用时执行：先把内存中的配置写回磁盘，再随模块系统卸载 */
     private void onUnload() {
+        saveAll();
         instance = null;
     }
 
@@ -186,7 +187,7 @@ public class Config implements Module {
      * */
     private @NonNull YamlConfig loadYmlConfig(@NonNull ConfigDefinition<?> configDefinition, File dataSource)
             throws ConfigException {
-        YamlConfig ymlConfig = new YamlConfig(configDefinition);
+        YamlConfig ymlConfig = new YamlConfig(configDefinition, dataSource);
         try {
             ymlConfig.load(dataSource);
         } catch (Exception e) {

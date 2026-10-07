@@ -1,6 +1,8 @@
 package io.github.hhn756.voidairrace;
 
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
+import io.github.hhn756.voidairrace.infrastructure.config.files.GlobalSettingKeys;
+import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
 import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.ListenerRegistrar;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.modules.Modules;
@@ -17,18 +19,23 @@ import java.util.logging.Logger;
 public class VoidAirRace extends JavaPlugin {
     @Override
     public void onEnable() {
-        // 文字画 “VAR”
-        Logger logger = getLogger();
-        logger.info(" __     ___    ____  ");
-        logger.info(" \\ \\   / / \\  |  _ \\ ");
-        logger.info("  \\ \\ / / _ \\ | |_) |");
-        logger.info("   \\ V / ___ \\|  _ < ");
-        logger.info("    \\_/_/   \\_\\_| \\_\\");
-
         instance = this;
 
         // 加载所有模块
         Modules.loadAll(ClassScanner.scanSubclasses(Module.class));
+
+        // 文字画 “VAR”（纯装饰，可经 global_settings.hide_ascii_logo 关闭）
+        if (!Config.getInstance()
+                .getYmlConfig(PublicFiles.GLOBAL_SETTINGS)
+                .get(GlobalSettingKeys.HIDE_ASCII_LOGO)
+        ) {
+            Logger logger = getLogger();
+            logger.info(" __     ___    ____  ");
+            logger.info(" \\ \\   / / \\  |  _ \\ ");
+            logger.info("  \\ \\ / / _ \\ | |_) |");
+            logger.info("   \\ V / ___ \\|  _ < ");
+            logger.info("    \\_/_/   \\_\\_| \\_\\");
+        }
 
         // 注册所有 Bukkit 事件监听器
         ListenerRegistrar.RegisterAll(this);
@@ -38,10 +45,7 @@ public class VoidAirRace extends JavaPlugin {
     public void onDisable() {
         getLogger().fine("禁用中...");
 
-        // 保存内存中的配置
-        Config.getInstance().saveAll();
-
-        // 逆加载顺序卸载模块链
+        // 按加载逆序卸载模块链
         Modules.unloadAll();
 
         instance = null;

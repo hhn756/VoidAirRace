@@ -7,7 +7,7 @@ import org.jspecify.annotations.NonNull;
 
 /**
  * 借用竞技场的凭据<br>
- * 借用者有义务保管返回变量，并还用完时归还
+ * 借用者有义务保管返回变量，并在用完后归还
  */
 public class ArenaToken {
     private final Integer arenaId;

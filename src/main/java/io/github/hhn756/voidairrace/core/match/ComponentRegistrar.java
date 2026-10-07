@@ -7,6 +7,7 @@ import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
+import io.github.hhn756.voidairrace.result.OperationResult;
 
 import java.util.Collection;
 import java.util.List;
@@ -47,7 +48,12 @@ public class ComponentRegistrar implements Module {
         for (Class<MatchComp> componentClass : componentClasses) {
             // 注册组件的无参构造器
             try {
-                compSubtable.add(new CompEntry(componentClass));
+                CompEntry entry = new CompEntry(componentClass);
+                OperationResult addResult = compSubtable.add(entry);
+                if (!addResult.isSuccess()) {
+                    logger.warning("注册比赛组件 “" + componentClass.getName() + "” 失败："
+                            + addResult.techMessage() + "！这可能是开发者的疏忽");
+                }
             } catch (NoSuchMethodException e) {
                 logger.warning("注册比赛组件 “"
                         + componentClass.getName()

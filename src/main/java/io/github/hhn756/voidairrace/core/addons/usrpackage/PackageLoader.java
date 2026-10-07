@@ -1,7 +1,7 @@
 package io.github.hhn756.voidairrace.core.addons.usrpackage;
 
 import io.github.hhn756.voidairrace.VoidAirRace;
-import io.github.hhn756.voidairrace.exception.UsrPackageException;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import org.jspecify.annotations.NonNull;
@@ -44,8 +44,9 @@ public class PackageLoader implements Module {
     private final @NonNull List<@NonNull MountedZip> mountedZips = new ArrayList<>();
 
     /**
-     * 插件启用时执行：扫描用户包目录，加载其中的所有用户包（目录形式或 .zip 压缩形式）<br>
-     * 单个包加载失败（无论可预期失败还是意外失败）只记录日志，继续处理其余条目
+     * 插件启用时执行：扫描用户包目录，解析其中的所有用户包（目录形式或 .zip 压缩形式），
+     * 一次性交给包管理器按依赖拓扑排序批量加载<br>
+     * 单个包加载失败（无论可预期失败还是意外失败）只记录日志，不影响其余包
      * */
     private void onLoad(@NonNull PackageManager packageManager) {
         Logger logger = VoidAirRace.getInstance().getLogger();
@@ -68,14 +69,16 @@ public class PackageLoader implements Module {
             return;
         }
 
-        int loadedCount = 0;
+        // 先收集全部包根（zip 挂载暂不关闭），批量交给包管理器统一排序加载
+        List<PackageRoot> roots = new ArrayList<>();
+        List<MountedZip> mounted = new ArrayList<>();
         for (Path entry : entries) {
-            // 目录包：直接以该目录为包根加载
+            // 目录包：直接以该目录为包根
             if (Files.isDirectory(entry)) {
-                if (loadAndReport(packageManager, PackageRoot.ofDirectory(entry), logger)) loadedCount++;
+                roots.add(PackageRoot.ofDirectory(entry));
                 continue;
             }
-            // zip 包：挂载为只读文件系统，解析出包根后加载，与目录包共用加载代码；其余文件忽略
+            // zip 包：挂载为只读文件系统，解析出包根，与目录包共用加载代码；其余文件忽略
             if (!isZipFile(entry)) continue;
             FileSystem fs = mountZip(entry, logger);
             if (fs == null) continue;
@@ -86,15 +89,54 @@ public class PackageLoader implements Module {
                 closeZip(fs, entry, logger);
                 continue;
             }
-            if (loadAndReport(packageManager, PackageRoot.ofZip(entry, rootInZip), logger)) {
-                mountedZips.add(new MountedZip(entry, fs)); // 保持挂载，插件禁用时统一关闭
-                loadedCount++;
-            } else {
-                closeZip(fs, entry, logger); // 加载失败，立即关闭挂载避免泄漏
-            }
+            roots.add(PackageRoot.ofZip(entry, rootInZip));
+            mounted.add(new MountedZip(entry, fs));
         }
 
-        logger.info("用户包自动加载完成，共加载 " + loadedCount + " 个");
+        List<PackageManager.PackageLoadResult> results = packageManager.loadAll(roots);
+
+        // 紧凑汇报：同类结果合并为一行，避免逐包刷屏；意外异常（含堆栈）仍逐条记录。
+        // 未启用与其他失败的条目以来源简称标识（失败结果不携带包 Id），已加载条目以包 Id 标识
+        List<String> loadedIds = new ArrayList<>();
+        List<String> notEnabledNames = new ArrayList<>();
+        Map<String, List<String>> failureGroups = new LinkedHashMap<>(); // 失败键 → 各项技术性消息
+        for (PackageManager.PackageLoadResult loadResult : results) {
+            if (loadResult.exception() != null) {
+                logger.log(Level.SEVERE, "自动加载用户包 " + loadResult.root().describe()
+                        + " 时发生意外错误：" + loadResult.exception().getMessage(), loadResult.exception());
+                continue;
+            }
+            ValueResult<UsrPackage> result = loadResult.result();
+            if (result == null) continue; // 结果与异常必居其一（PackageLoadResult 契约），防御性跳过
+            if (result.hasValue()) {
+                loadedIds.add(result.value().id());
+            } else if (result instanceof ValueResult.Failed<UsrPackage> failed) {
+                if (TranslateKeys.Addons.USR_PACKAGE_PACKAGE_NOT_ENABLED.equals(failed.reasonKey())) {
+                    notEnabledNames.add(shortSourceName(loadResult.root()));
+                } else {
+                    String techMessage = failed.techMessage();
+                    failureGroups.computeIfAbsent(failed.reasonKey(), key -> new ArrayList<>())
+                            .add(techMessage == null ? shortSourceName(loadResult.root()) : techMessage);
+                }
+            }
+        }
+        logger.info("已加载：" + (loadedIds.isEmpty() ? "无" : String.join("、", loadedIds)));
+        if (!notEnabledNames.isEmpty()) {
+            logger.warning("未加载未启用的包：" + String.join("、", notEnabledNames));
+        }
+        for (Map.Entry<String, List<String>> group : failureGroups.entrySet()) {
+            logger.warning("未加载用户包（" + failureLabel(group.getKey()) + "）："
+                    + String.join("；", group.getValue()));
+        }
+
+        // 加载成功的 zip 包保持挂载（包内容在本次启用中仍会被读取），其余挂载立即关闭避免泄漏
+        for (MountedZip zip : mounted) {
+            boolean loaded = results.stream().anyMatch(loadResult -> loadResult.isSuccess()
+                    && loadResult.root().isZip()
+                    && loadResult.root().zipPath().equals(zip.zipPath()));
+            if (loaded) mountedZips.add(zip);
+            else closeZip(zip.fileSystem(), zip.zipPath(), logger);
+        }
     }
 
     /**
@@ -110,6 +152,43 @@ public class PackageLoader implements Module {
     }
 
     // ------ 内部辅助方法 ------
+
+    /** 失败原因翻译键 → 汇报行里的简短类别标签（未登记的键原样输出） */
+    private static final @NonNull Map<@NonNull String, @NonNull String> FAILURE_LABELS = Map.ofEntries(
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DIR_NOT_FOUND, "包目录不存在"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_NOT_A_PACKAGE, "缺少包元文件"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_META_SIZE_ERROR, "元文件尺寸异常"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_META_FIELD_FORMAT_ERROR, "元文件字段格式错误"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DEPENDENCY_CYCLE, "依赖存在循环"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_ID_DUPLICATE, "包 Id 重复"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_API_VERSION_UNSUPPORTED, "API 版本不受支持"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DEPENDENCY_MISSING, "依赖的包未加载"),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED, "入口脚本执行失败")
+    );
+
+    /**
+     * 取失败原因对应的简短类别标签
+     *
+     * @param reasonKey 失败结果的翻译键，允许为{@code null}（视为未知原因）
+     *
+     * @return 登记过的键返回对应标签，否则返回键原文；{@code null} 键返回「未知原因」
+     * */
+    private static @NonNull String failureLabel(@Nullable String reasonKey) {
+        if (reasonKey == null) return "未知原因";
+        return FAILURE_LABELS.getOrDefault(reasonKey, reasonKey);
+    }
+
+    /**
+     * 取包来源的简称用于紧凑汇报：目录包为目录名，zip 包为 zip 文件名（不含上级路径）
+     *
+     * @param root 包根
+     *
+     * @return 来源简称
+     * */
+    private static @NonNull String shortSourceName(@NonNull PackageRoot root) {
+        Path fileName = root.isZip() ? root.zipPath().getFileName() : root.path().getFileName();
+        return String.valueOf(fileName);
+    }
 
     /**
      * 挂载一个 zip 用户包为只读文件系统
@@ -163,38 +242,6 @@ public class PackageLoader implements Module {
     private static boolean isZipFile(@NonNull Path entry) {
         return Files.isRegularFile(entry)
                 && entry.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(ZIP_SUFFIX);
-    }
-
-    /**
-     * 加载一个用户包并记录结果日志，目录包与 zip 包共用
-     *
-     * @param packageManager 包管理器
-     * @param packageRoot 包根（含来源描述）
-     * @param logger 日志器
-     *
-     * @return 加载成功返回{@code true}
-     * */
-    private static boolean loadAndReport(
-            @NonNull PackageManager packageManager,
-            @NonNull PackageRoot packageRoot,
-            @NonNull Logger logger
-    ) {
-        String label = packageRoot.describe();
-        ValueResult<UsrPackage> result;
-        try {
-            result = packageManager.load(packageRoot);
-        } catch (UsrPackageException e) {
-            // 意外失败（读取元文件的 IO 异常等）
-            logger.log(Level.SEVERE, "自动加载用户包 " + label + " 时发生意外错误：" + e.getMessage(), e);
-            return false;
-        }
-
-        if (result.hasValue()) {
-            logger.info("已加载用户包：" + result.value().id() + "（来源：" + label + "）");
-            return true;
-        }
-        logger.warning("跳过用户包 " + label + "：" + result.techMessage());
-        return false;
     }
 
     /**

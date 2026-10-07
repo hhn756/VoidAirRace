@@ -20,11 +20,13 @@ public class PublicFiles {
      * */
     public static final ConfigDefinition<YamlConfig> GAME_SETTINGS = new ConfigDefinition<>(
             "game_settings", GameSettingKeys.ALL_KEYS, new TypeReference<>() {});
+
     /**
      * 储存所有需要持久化的状态标记
      * */
     public static final ConfigDefinition<YamlConfig> FLAGS = new ConfigDefinition<>(
             "flags", FlagsKeys.ALL_KEYS, new TypeReference<>() {});
+
     /**
      * 全局设置
      * */

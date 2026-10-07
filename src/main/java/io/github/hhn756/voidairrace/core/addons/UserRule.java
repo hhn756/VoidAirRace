@@ -8,23 +8,20 @@ import io.github.hhn756.voidairrace.result.OperationResult;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Set;
 import java.util.function.Supplier;
 
 /**
  * 包装一个由用户包注册的比赛规则<br>
  * 用户包在脚本侧描述的规则由此类适配为 {@link MatchRule}：
- * 元数据与标签来自注册时提供的信息，规则行为委托给注册项适配出的{@link Callback 回调}
+ * 元数据（含标签）来自注册时提供的信息，规则行为委托给注册项适配出的{@link Callback 回调}
  * <p>
- * 本类型是所有用户规则的统一类型：不同规则的差异完全由构造参数（元数据、标签、回调）表达，
+ * 本类型是所有用户规则的统一类型：不同规则的差异完全由构造参数（元数据、回调）表达，
  * 不存在也不需要子类，其注册项固定产出本类型
  * <p>
  * 实例化约束：只能由本规则对应的注册项构造（构造器包私有），其余代码不应也无法实例化本类
  * */
 public final class UserRule implements MatchRule {
     private final @NonNull GameElementMeta meta;
-    private final @NonNull Set<@NonNull String> tags;
     private final @NonNull UsrPackage source;
     private final @Nullable Callback callback;
 
@@ -32,19 +29,16 @@ public final class UserRule implements MatchRule {
      * 构造一个用户规则实例<br>
      * 仅限本规则对应的注册项调用
      *
-     * @param meta     规则的元数据，来自注册时提供的信息
-     * @param tags     规则的标签，内部存储为不可变副本
+     * @param meta     规则的元数据（含标签），来自注册时提供的信息
      * @param source   注册此规则的来源用户包
      * @param callback 规则的行为回调，允许为 {@code null}（表示无自定义行为，各生命周期方法采用默认行为）
      * */
     UserRule(
             @NonNull GameElementMeta meta,
-            @NonNull Collection<@NonNull String> tags,
             @NonNull UsrPackage source,
             @Nullable Callback callback
     ) {
         this.meta = meta;
-        this.tags = Set.copyOf(tags);
         this.source = source;
         this.callback = callback;
     }
@@ -55,8 +49,7 @@ public final class UserRule implements MatchRule {
      * {@link RuleEntry#newInstance()} 时用注册参数构造一个全新的 UserRule 实例，
      * 规则实例化因此只能经注册项发生
      *
-     * @param meta      规则的元数据，来自注册时提供的信息
-     * @param tags      规则的标签，内部存储为不可变副本
+     * @param meta      规则的元数据（含标签），来自注册时提供的信息
      * @param source    注册此规则的来源用户包
      * @param callbacks 回调工厂，每个规则实例构造时调用一次以获得该实例专属的行为回调
      *
@@ -64,11 +57,10 @@ public final class UserRule implements MatchRule {
      * */
     public static @NonNull RuleEntry<UserRule> entry(
             @NonNull GameElementMeta meta,
-            @NonNull Collection<@NonNull String> tags,
             @NonNull UsrPackage source,
             @NonNull Supplier<@NonNull Callback> callbacks
     ) {
-        return new RuleEntry<>(meta, () -> new UserRule(meta, tags, source, callbacks.get()));
+        return new RuleEntry<>(meta, () -> new UserRule(meta, source, callbacks.get()));
     }
 
     /**
@@ -81,11 +73,6 @@ public final class UserRule implements MatchRule {
     @Override
     public @NonNull GameElementMeta getElementMeta() {
         return meta;
-    }
-
-    @Override
-    public @NonNull Collection<String> getTags() {
-        return tags;
     }
 
     @Override

@@ -58,7 +58,8 @@ public class GrassLand extends PlayableGameMap implements Listener {
             ),
             Component.translatable(TranslateKeys.Map.GRASS_LAND_DISPLAY_VERSION),
             1L,
-            null
+            List.of(),
+            List.of()
     );
 
     /**

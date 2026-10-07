@@ -49,6 +49,7 @@
   "void_air_race.map.create_default_config.map_notfound": "未找到指定的地图",
   "void_air_race.map.create_default_config.map_not_playable": "默认地图不可游玩",
   "void_air_race.map.map_component.selected_start_failed": "地图组件启动失败",
+  "void_air_race.map.map_component.selected_start_failed_unknown_cause": "地图组件启动失败：未知原因",
   
   "void_air_race.map.grass_land.name": "草原",
   "void_air_race.map.grass_land.description_line1": "",
@@ -73,6 +74,8 @@
   "void_air_race.arena.arena_manager.no_free_arena": "没有空闲的竞技场可用",
   "void_air_race.arena.arena_manager.token_is_invalid": "竞技场借据无效",
   "void_air_race.arena.arena_manager.io_exception": "加载竞技场世界时发生 IO 异常",
+  "void_air_race.arena.arena_manager.dir_conflict": "竞技场世界目录已存在，拒绝覆盖，请检查服务端根目录下的同名目录",
+  "void_air_race.arena.arena_manager.dir_missing": "竞技场世界目录不存在，请先加载竞技场数据",
 
   "_": "------ 玩家交互 ------",
 
@@ -146,5 +149,7 @@
   "void_air_race.addons.usr_package.api_version_unsupported": "用户包 %s 要求的插件 API 版本不受支持，这意味着此用户包不匹配当前版本的游戏插件",
   "void_air_race.addons.usr_package.entry_script_failed": "用户包入口脚本执行失败",
   "void_air_race.addons.usr_package.entry_script_io_error": "读取用户包入口脚本时发生 IO 异常",
-  "void_air_race.addons.usr_package.package_not_enabled": "用户包 %s 未启用"
+  "void_air_race.addons.usr_package.package_not_enabled": "用户包 %s 未启用",
+  "void_air_race.addons.usr_package.dependency_missing": "依赖的用户包 %s 未加载",
+  "void_air_race.addons.usr_package.dependency_cycle": "用户包存在循环依赖"
 }

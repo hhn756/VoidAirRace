@@ -15,8 +15,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -24,7 +22,6 @@ import java.util.List;
  * */
 public class BasicEndDetermination implements MatchRule, Listener {
     public static final NamespacedKey ID = Plugin.key("basic_end_determination");
-    private static final Collection<String> tags = new ArrayList<>();
     public static final GameElementMeta meta = new GameElementMeta(
             ID,
             List.of(Component.translatable(
@@ -36,7 +33,8 @@ public class BasicEndDetermination implements MatchRule, Listener {
             Component.translatable(
                     TranslateKeys.MatchRule.BASIC_END_DETERMINATION_DISPLAY_VERSION),
             1L,
-            null
+            List.of(),
+            List.of()
     );
 
     @EventHandler
@@ -51,11 +49,6 @@ public class BasicEndDetermination implements MatchRule, Listener {
             MatchCoordinator.getInstance().stopMatch();
             return;
         }
-    }
-
-    @Override
-    public @NonNull Collection<String> getTags() {
-        return tags;
     }
 
     @Override

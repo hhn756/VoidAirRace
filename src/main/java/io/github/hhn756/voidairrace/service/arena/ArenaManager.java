@@ -14,6 +14,7 @@ import io.github.hhn756.voidairrace.infrastructure.util.JarEntryUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.WorldCreatorUtil;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -22,15 +23,29 @@ import org.jspecify.annotations.NonNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 /**
- * 管理多个竞技场的加载/卸载，每个竞技场用数字 ID 标识（{@code 1} ~ {@code maxArenas}）
+ * 管理多个竞技场的加载/卸载，每个竞技场用数字 ID 标识（{@code 1} ~ {@code maxArenas}）<br>
+ * 竞技场世界目录的生命周期与借用一致：加载竞技场数据时经冲突检查后由模板复制创建，
+ * 归还/卸载世界时删除；加载前目录不应存在，存在即异常残留或同名的无关目录，拒绝加载
  */
 public class ArenaManager implements Module {
     private static ArenaManager instance;
+
+    /**
+     * 竞技场世界目录名的合法形态（由{@link #arenaIdToWorldName(Integer)}生成），<br>
+     * 删除目录前校验，杜绝误删其他目录
+     * */
+    private static final Pattern ARENA_WORLD_DIR_NAME = Pattern.compile(
+            Pattern.quote(Plugin.ns) + "\\.arena\\.\\d+");
 
     @Override
     public Collection<Class<? extends Module>> getRequiredModules() {
@@ -155,9 +170,10 @@ public class ArenaManager implements Module {
     // ------ 对竞技场的操作 ------
 
     /**
-     * 将指定竞技场数据加载到竞技场世界中
+     * 将指定竞技场数据加载到竞技场世界中<br>
+     * 竞技场世界目录已存在时返回失败（上次异常退出残留或同名的无关目录，不擅自删除，交由管理员处置）
      *
-     * @param token 此借据都应的竞技场世界将要承载竞技场数据
+     * @param token 此借据对应的竞技场世界将要承载竞技场数据
      * @param arenaPath 要加载的竞技场世界数据路径（{@code resource/<arenaPath>/}）
      * */
     public @NonNull OperationResult loadArena(ArenaToken token, String arenaPath) {
@@ -172,16 +188,18 @@ public class ArenaManager implements Module {
             return OperationResult.failure(
                     TranslateKeys.Arena.ARENA_MANAGER_IO_EXCEPTION, null, null, e
             );
+        } catch (ArenaException e) {
+            // 无可上报原因的翻译键：用户消息取异常携带的用户文案，技术性消息取异常文本，兜底文案交给最外层
+            return OperationResult.failure(null, e.getUserMessage(), e.getMessage(), e);
         }
         return OperationResult.success();
     }
 
     /**
-     * 加载竞技场世界
+     * 加载竞技场世界<br>
+     * 要求竞技场世界目录已存在（由{@link #loadArena(ArenaToken, String)}复制模板时创建），否则返回失败
      *
-     * @param token 加载此借据对应的竞技场世界
-     *
-     * @see ArenaException
+     * @param token 加载 此借据对应的竞技场世界
      * */
     public @NonNull OperationResult loadArenaWorld(ArenaToken token) {
         if (!validateToken(token)) return OperationResult.failure(
@@ -213,7 +231,7 @@ public class ArenaManager implements Module {
 
     /**
      * 获取借据对应的竞技场世界<br>
-     * 如果世界未加载，那么会自动加载它
+     * 如果世界未加载，那么会自动加载它（要求竞技场世界目录已就绪，见{@link #loadArena(ArenaToken, String)}）
      * */
     public @NonNull ValueResult<World> getTokenWorld(@NonNull ArenaToken token) {
         if (!validateToken(token)) return ValueResult.failure(
@@ -247,20 +265,32 @@ public class ArenaManager implements Module {
 
     /**
      * 加载一个竞技场（不是竞技场世界）<br>
-     * 如果竞技场世界 已加载，那么会 重新加载 它；如果竞技场世界 未加载，那么会 加载 它
+     * 如果竞技场世界已加载，那么会重新加载它；如果竞技场世界未加载，那么会加载它<br>
+     * 正常生命周期下竞技场世界目录在归还/卸载时已删除，加载前不应存在；
+     * 此时仍存在即上次异常退出的残留或同名的无关目录，拒绝加载并记录日志，不擅自删除
      *
      * @param arenaWorldId 要将竞技场加载到的竞技场世界
      * @param arenaPath 要加载的竞技场世界数据路径（{@code resource/<arenaPath>/}）
      *
      * @throws IOException 复制竞技场数据时出现 IO 错误则抛出
+     * @throws ArenaException 竞技场世界目录已存在（拒绝覆盖）时抛出
      * */
     private void loadArena(Integer arenaWorldId, String arenaPath) throws IOException {
-        // 如果该竞技场世界已加载，先卸载（不保存修改）
+        // 如果该竞技场世界已加载，先卸载（不保存修改，竞技场世界目录随卸载一并删除）
         if (arenaState(arenaWorldId).getLoadedWorld() != null) {
             unloadArenaWorld(arenaWorldId);
         }
 
         String worldName = arenaIdToWorldName(arenaWorldId);
+        Path worldDir = Path.of(worldName);
+
+        // 冲突检查：目录在归还/卸载时已删除，仍存在即残留或同名无关目录，拒绝覆盖
+        if (Files.exists(worldDir)) {
+            String techDetail = "竞技场世界目录已存在，拒绝覆盖：" + worldDir.toAbsolutePath();
+            VoidAirRace.getInstance().getLogger().warning(techDetail);
+            throw new ArenaException(techDetail,
+                    Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_DIR_CONFLICT));
+        }
 
         // 复制竞技场数据
         JarEntryUtil.copyFromJar(arenaPath, worldName);
@@ -270,12 +300,12 @@ public class ArenaManager implements Module {
     }
 
     /**
-     * 加载指定竞技场世界<br>
+     * 加载指定竞技场世界（竞技场世界目录须已存在，由{@link #loadArena(Integer, String)}复制模板时创建）<br>
      * 如果尝试重复加载同一世界，那么不会执行任何操作
      *
      * @param arenaId 竞技场 ID（{@code 1} ~ {@code maxArenas}）
      *
-     * @throws ArenaException 当竞技场复制失败或世界加载失败时抛出
+     * @throws ArenaException 当竞技场世界目录不存在或世界加载失败时抛出
      */
     private World loadArenaWorld(Integer arenaId) throws ArenaException {
         // 已加载直接返回，否则加载新世界
@@ -283,18 +313,30 @@ public class ArenaManager implements Module {
         if (loadedWorld != null) return loadedWorld;
 
         String worldName = arenaIdToWorldName(arenaId);
+        Path worldDir = Path.of(worldName);
+
+        // 竞技场世界目录缺失说明模板未复制，拒绝凭空创建空世界
+        if (!Files.isDirectory(worldDir)) {
+            String techDetail = "竞技场世界目录不存在，无法加载竞技场世界：" + worldDir.toAbsolutePath();
+            VoidAirRace.getInstance().getLogger().warning(techDetail);
+            throw new ArenaException(techDetail,
+                    Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_DIR_MISSING));
+        }
 
         // 添加提示文件
         addTips(worldName);
 
-        // 创建并加载世界
+        // 创建并加载世界；比赛期间不自动落盘（卸载时同样不保存）
         World newWorld = WorldCreatorUtil.createVoidWorld(worldName);
+        newWorld.setAutoSave(false);
         arenaState(arenaId).setLoadedWorld(newWorld);
         return newWorld;
     }
 
     /**
-     * 卸载指定竞技场世界，并且不保存内存中的修改
+     * 卸载指定竞技场世界，并且不保存内存中的修改<br>
+     * 卸载成功后删除竞技场世界目录（目录生命周期与借用一致：加载时创建、归还/卸载时删除）；
+     * 世界本就未加载时不做任何事（目录可能是同名的无关目录，不擅自删除）
      *
      * @param arenaId 竞技场 ID
      */
@@ -310,8 +352,14 @@ public class ArenaManager implements Module {
             player.teleport(spawnLoc);
         }
 
-        // 卸载世界
-        Bukkit.unloadWorld(world, false);
+        // 卸载世界（不保存）；卸载成功才删除目录，避免删除仍在使用中的世界目录
+        boolean unloaded = Boolean.TRUE.equals(Bukkit.unloadWorld(world, false));
+        if (!unloaded) {
+            VoidAirRace.getInstance().getLogger().severe(
+                    "卸载竞技场世界失败，暂不删除其世界目录：" + arenaIdToWorldName(arenaId));
+            return;
+        }
+        deleteWorldDirectory(Path.of(arenaIdToWorldName(arenaId)));
 
         // 更新状态
         arenaState(arenaId).setLoadedWorld(null);
@@ -344,15 +392,11 @@ public class ArenaManager implements Module {
     }
 
     /**
-     * 在世界目录中添加提示文件
+     * 在世界目录中添加提示文件（目录须已存在，由竞技场数据复制时创建）
      * */
     private void addTips(String targetDir) {
         VoidAirRace mainClass = VoidAirRace.getInstance();
         File targetDirFile = new File(targetDir);
-        if (!targetDirFile.exists() && !targetDirFile.mkdirs()) {
-            mainClass.getLogger().warning("无法创建世界目录：" + targetDir);
-            return;
-        }
         for (String tipText : tips) {
             File tipFile = new File(targetDirFile, tipText);
             try {
@@ -360,6 +404,34 @@ public class ArenaManager implements Module {
             } catch (IOException e) {
                 mainClass.getLogger().warning("创建提示语文件 '" + tipText + "' 失败");
             }
+        }
+    }
+
+    /**
+     * 递归删除一个竞技场世界目录<br>
+     * 目录名必须匹配竞技场世界命名模式（{@link #ARENA_WORLD_DIR_NAME}），否则拒绝删除；
+     * 删除失败只记录日志不抛出（调用方无法补救），残留目录会在下次加载时被冲突检查拦下
+     *
+     * @param dir 竞技场世界目录
+     * */
+    private static void deleteWorldDirectory(@NonNull Path dir) {
+        if (!ARENA_WORLD_DIR_NAME.matcher(dir.getFileName().toString()).matches()) {
+            VoidAirRace.getInstance().getLogger().severe(
+                    "目标目录名不符合竞技场世界命名模式，拒绝删除：" + dir.toAbsolutePath());
+            return;
+        }
+        try (var paths = Files.walk(dir)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    VoidAirRace.getInstance().getLogger().log(
+                            Level.SEVERE, "删除竞技场世界文件失败：" + path.toAbsolutePath(), e);
+                }
+            });
+        } catch (IOException e) {
+            VoidAirRace.getInstance().getLogger().log(
+                    Level.SEVERE, "遍历竞技场世界目录失败：" + dir.toAbsolutePath(), e);
         }
     }
 

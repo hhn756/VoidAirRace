@@ -13,7 +13,7 @@ public class Plugin {
     public static final @NonNull String ns = "void_air_race";
 
     /**
-     * 插件 API 版本号，用户包元文件的{@code api}字段约束的是它<br>
+     * 目前插件的 Lua API 版本号，用户包元文件的{@code api}字段约束的是它<br>
      * 每当用户包可见的插件 API 发生不兼容变更时递增
      * */
     public static final int API_VERSION = 1;

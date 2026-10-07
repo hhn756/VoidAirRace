@@ -96,7 +96,7 @@ public final class Modules {
         if (!INSTANCES.isEmpty()) throw new IllegalStateException("模块已加载，不能在同一次插件启用中重复加载");
 
         declaredModules = List.copyOf(modules);
-        logger().info("模块加载器：本次启用声明 " + declaredModules.size() + " 个模块");
+        logger().fine("模块加载器：本次启用声明 " + declaredModules.size() + " 个模块");
 
         List<Class<? extends Module>> order;
         try {
@@ -129,7 +129,7 @@ public final class Modules {
             }
         }
 
-        logger().info("模块加载器：全部 " + LOADED.size() + " 个模块加载完成");
+        logger().fine("模块加载器：全部 " + LOADED.size() + " 个模块加载完成");
     }
 
     /**
@@ -143,7 +143,7 @@ public final class Modules {
             return;
         }
 
-        logger().info("模块卸载器：按加载逆序卸载 " + LOADED.size() + " 个模块");
+        logger().fine("模块卸载器：按加载逆序卸载 " + LOADED.size() + " 个模块");
         List<Class<? extends Module>> snapshot = new ArrayList<>(LOADED);
         for (int i = snapshot.size() - 1; i >= 0; i--) {
             Class<? extends Module> moduleClass = snapshot.get(i);

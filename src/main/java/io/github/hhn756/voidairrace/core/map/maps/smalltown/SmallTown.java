@@ -29,7 +29,8 @@ public class SmallTown extends PlayableGameMap {
             ),
             Component.translatable(TranslateKeys.Map.SMALL_TOWN_DISPLAY_VERSION),
             1L,
-            null
+            List.of(),
+            List.of()
     );
 
     @Override

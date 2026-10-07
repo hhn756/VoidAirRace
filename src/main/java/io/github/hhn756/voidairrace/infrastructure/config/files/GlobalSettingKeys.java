@@ -31,7 +31,13 @@ public class GlobalSettingKeys {
         return map;
     }
 
+    /** 是否隐藏启动时的字符画 Logo */
+    public static final ConfigKey<Boolean> HIDE_ASCII_LOGO = new ConfigKey<>(
+            "hide_ascii_logo", false, "是否隐藏启动时控制台的字符画 Logo"
+    ){};
+
     public static final ConfigKey<?>[] ALL_KEYS = {
-            SPAWN_LOCATION
+            SPAWN_LOCATION,
+            HIDE_ASCII_LOGO
     };
 }

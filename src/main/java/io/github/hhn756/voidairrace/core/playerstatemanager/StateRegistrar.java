@@ -6,6 +6,7 @@ import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
+import io.github.hhn756.voidairrace.result.OperationResult;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.Listener;
@@ -86,11 +87,11 @@ public class StateRegistrar implements Module {
             StateSystemEntry entry = new StateSystemEntry(stateId.getNamespace(), stateId);
             String entryId = entry.getSystemId();
 
-            if (stateSystems.isRegistered(entryId)) {
+            OperationResult addResult = stateSystems.add(entry);
+            if (!addResult.isSuccess()) {
                 throw new IllegalStateException(
                         "注册玩家状态体系时在 '" + entryId + "' 体系发现重复的默认状态。这可能是开发者的疏忽");
             }
-            stateSystems.add(entry);
         }
     }
 
@@ -106,12 +107,11 @@ public class StateRegistrar implements Module {
                 throw new IllegalStateException(
                         "注册玩家状态时发现状态体系 '" + stateId.getNamespace() + "' 没有默认状态。这可能是开发者的疏忽");
             }
-            if (system.isRegistered(stateId)) {
+            OperationResult addResult = system.add(state);
+            if (!addResult.isSuccess()) {
                 throw new IllegalStateException(
                         "注册玩家状态时发现有多个状态的id相同：'" + stateId + "'。这可能是开发者的疏忽");
             }
-
-            system.add(state);
 
             if (state instanceof Listener listener) {
                 Bukkit.getPluginManager().registerEvents(listener, mainClass);

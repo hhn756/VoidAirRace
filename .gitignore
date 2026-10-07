@@ -27,7 +27,6 @@ bin/
 .DS_Store
 
 # trae
-
 .trae/
 
 # 通用输出目录

@@ -1,4 +1,4 @@
-package io.github.hhn756.voidairrace.core.addons.usrpackage.script;
+package io.github.hhn756.voidairrace.core.addons.usrpackage.script.api;
 
 import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
@@ -9,6 +9,7 @@ import io.github.hhn756.voidairrace.result.ValueResult;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.Table;
+import net.sandius.rembulan.load.ChunkClassLoader;
 import net.sandius.rembulan.runtime.LuaFunction;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -21,8 +22,8 @@ import org.jspecify.annotations.Nullable;
  * 所有 Lua 调用经{@link ScriptCallGate}：主线程断言、指令预算与异常映射由其统一处理
  * */
 final class LuaRuleCallback implements UserRule.Callback {
-    private final @NonNull ScriptCallGate gate;
     private final @NonNull StateContext stateContext;
+    private final @NonNull ChunkClassLoader chunkClassLoader;
     private final @Nullable LuaFunction onEnableFn;
     private final @Nullable LuaFunction onDisableFn;
     private final @Nullable LuaFunction tickFn;
@@ -34,22 +35,22 @@ final class LuaRuleCallback implements UserRule.Callback {
     /**
      * 构造一个用户规则的行为适配器
      *
-     * @param gate          Java 调 Lua 的唯一门
-     * @param stateContext  共享 Lua 状态上下文
-     * @param onEnableFn    脚本提供的 on_enable 函数，未提供为{@code null}
-     * @param onDisableFn   脚本提供的 on_disable 函数，未提供为{@code null}
-     * @param tickFn        脚本提供的 tick 函数，未提供为{@code null}
-     * @param owner         归属描述（包Id:规则键名），用于日志与错误消息
+     * @param chunkClassLoader 编译产物类加载器，供调用门生成 Lua 风格调用栈
+     * @param stateContext     共享 Lua 状态上下文
+     * @param onEnableFn       脚本提供的 on_enable 函数，未提供为{@code null}
+     * @param onDisableFn      脚本提供的 on_disable 函数，未提供为{@code null}
+     * @param tickFn           脚本提供的 tick 函数，未提供为{@code null}
+     * @param owner            归属描述（包Id:规则键名），用于日志与错误消息
      * */
     LuaRuleCallback(
-            @NonNull ScriptCallGate gate,
+            @NonNull ChunkClassLoader chunkClassLoader,
             @NonNull StateContext stateContext,
             @Nullable LuaFunction onEnableFn,
             @Nullable LuaFunction onDisableFn,
             @Nullable LuaFunction tickFn,
             @NonNull String owner
     ) {
-        this.gate = gate;
+        this.chunkClassLoader = chunkClassLoader;
         this.stateContext = stateContext;
         this.onEnableFn = onEnableFn;
         this.onDisableFn = onDisableFn;
@@ -61,7 +62,7 @@ final class LuaRuleCallback implements UserRule.Callback {
     @Override
     public @NonNull OperationResult onEnable(@NonNull Match match) {
         if (onEnableFn == null) return OperationResult.success();
-        ValueResult<Object[]> result = gate.call(stateContext, onEnableFn, matchHandle);
+        ValueResult<Object[]> result = ScriptCallGate.call(stateContext, chunkClassLoader, onEnableFn, matchHandle);
         if (!result.hasValue()) {
             return OperationResult.failure(
                     TranslateKeys.MatchRule.USER_RULE_ON_ENABLE_FAILED,
@@ -100,7 +101,7 @@ final class LuaRuleCallback implements UserRule.Callback {
      * */
     private void callVoid(@Nullable LuaFunction fn, @NonNull String what) {
         if (fn == null) return;
-        ValueResult<Object[]> result = gate.call(stateContext, fn, matchHandle);
+        ValueResult<Object[]> result = ScriptCallGate.call(stateContext, chunkClassLoader, fn, matchHandle);
         if (!result.hasValue()) {
             VoidAirRace.getInstance().getLogger().warning(
                     "用户规则 " + what + " 调用失败：" + owner + "（" + result.techMessage() + "）"

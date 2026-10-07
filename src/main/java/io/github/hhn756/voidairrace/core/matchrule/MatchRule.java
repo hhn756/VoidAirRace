@@ -9,7 +9,6 @@ import io.github.hhn756.voidairrace.result.OperationResult;
 import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Collection;
 import java.util.List;
 
 public interface MatchRule extends GameElement {
@@ -21,18 +20,13 @@ public interface MatchRule extends GameElement {
             List.of(Component.translatable(
                     TranslateKeys.MatchComp.COMP_BASE_DEFAULT_NAME
             )),
-            null, null, null, null, null
+            List.of(), List.of(), Component.empty(), 0L, List.of(), List.of()
     );
 
     @Override
     default @NonNull GameElementMeta getElementMeta() {
         return defaultMeta;
     };
-
-    /**
-     * 获取规则的所有标签
-     */
-    @NonNull Collection<String> getTags();
 
     /**
      * 规则被启用时调用（例如比赛开始时或中途添加）

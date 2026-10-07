@@ -23,7 +23,7 @@ public class MatchComp {
     private static final @NonNull GameElementMeta defaultMeta = new GameElementMeta(
             new NamespacedKey(VoidAirRace.getInstance(), "default_component"),
             List.of(Component.translatable(TranslateKeys.MatchComp.COMP_BASE_DEFAULT_NAME)),
-            null, null, null, null, null
+            List.of(), List.of(), Component.empty(), 0L, List.of(), List.of()
     );
 
     /**

@@ -1,4 +1,14 @@
+import com.sun.source.tree.*
+import com.sun.source.util.JavacTask
+import com.sun.source.util.TreePathScanner
+import com.sun.source.util.Trees
 import voidairrace.build.SubclassIndexTask
+import java.nio.file.Path
+import java.util.*
+import javax.tools.Diagnostic
+import javax.tools.DiagnosticCollector
+import javax.tools.JavaFileObject
+import javax.tools.ToolProvider
 
 group = "io.github.hhn756"
 version = "0.1"
@@ -27,7 +37,6 @@ dependencies {
     implementation(files("libs/rembulan/rembulan-runtime-0.4.2.jar"))
     implementation(files("libs/rembulan/rembulan-stdlib-0.4.2.jar"))
     // ASM（字节码生成库）—— rembulan-compiler 编译 Lua 时运行期需要（缺它时编译能过、运行报 NoClassDefFoundError）
-    // 许可证：3-Clause BSD（https://asm.ow2.io/license.html）
     implementation("org.ow2.asm:asm:6.2")
     implementation("org.ow2.asm:asm-tree:6.2")
     implementation("org.ow2.asm:asm-analysis:6.2")
@@ -163,6 +172,109 @@ tasks.register("generateTranslateKeys") {
         outFile.parentFile.mkdirs()
         outFile.writeText(sb.toString(), Charsets.UTF_8)
         logger.lifecycle("已生成 ${byModule.values.sumOf { it.size }} 个翻译键常量 → $outFile")
+    }
+}
+
+/*
+ * 基于语法树扫描主源码集全部 .java 文件，报告跨行数 >= 阈值的语句块（BlockTree）起始位置，辅助拆分重构
+ * 只统计「逻辑块」：方法/构造器体、初始化块、lambda、if/for/while/do/try/catch/synchronized/case 等；
+ * 类体、数组初始化器、switch 体等天然允许很长的大括号在语法树中不是 BlockTree 节点，自动排除
+ * 实现：JDK 自带编译器树 API（com.sun.source，无需额外依赖），TreePathScanner 遍历，
+ *       Trees.getSourcePositions + LineMap 换算行列；报告顺序为同一文件内外层块先于内层块
+ * 解析出错的文件按诊断逐条告警，能解析出的部分照常统计
+ * 用法：gradlew findLongBracketPairs [-PminSpan=60]（缺省 60；阈值必须 >= 1）
+ * 行数按「闭括号行 - 开括号行 + 1」计；列号按字符计（制表符算 1）
+ */
+tasks.register("findLongBracketPairs") {
+    group = "inspection"
+    description = "基于语法树报告主源码集中跨行数达到阈值的语句块（定位过长代码块）"
+
+    doLast {
+        val minSpan = findProperty("minSpan")?.toString()?.toIntOrNull() ?: 60
+        if (minSpan < 1) throw GradleException("minSpan 必须 >= 1：$minSpan")
+
+        val srcDir = file("src/main/java")
+        if (!srcDir.isDirectory) throw GradleException("源码目录不存在：$srcDir")
+        val files = srcDir.walkTopDown()
+            .filter { it.isFile && it.extension == "java" }
+            .toList()
+        if (files.isEmpty()) {
+            logger.lifecycle("源码目录下没有 .java 文件：$srcDir")
+            return@doLast
+        }
+
+        val compiler = ToolProvider.getSystemJavaCompiler()
+            ?: throw GradleException("当前 Gradle 运行在 JRE 上，拿不到系统编译器，无法解析语法树")
+
+        val diagnostics = DiagnosticCollector<JavaFileObject>()
+        val fileManager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, Charsets.UTF_8)
+        val task = compiler.getTask(
+            null,
+            fileManager,
+            diagnostics,
+            null,
+            null,
+            fileManager.getJavaFileObjects(*files.toTypedArray())
+        ) as JavacTask
+        val cus = task.parse().toList()
+
+        // 解析期诊断：语法错误的文件只告警，能解析出的部分照常统计
+        diagnostics.diagnostics
+            .filter { it.kind == Diagnostic.Kind.ERROR }
+            .forEach { d ->
+                val where = d.source?.toUri()?.path ?: "(未知来源)"
+                logger.warn("语法错误：$where ${d.lineNumber}:${d.columnNumber} ${d.getMessage(Locale.ROOT)}")
+            }
+
+        val sourcePositions = Trees.instance(task).sourcePositions
+        val srcDirPath = srcDir.toPath()
+        var fileCount = 0
+        var hitCount = 0
+
+        for (cu in cus) {
+            fileCount++
+            val relPath = srcDirPath.relativize(Path.of(cu.sourceFile.toUri())).toString()
+            val lineMap = cu.lineMap
+
+            val scanner = object : TreePathScanner<Void?, Void?>() {
+                // 块的种类由直接父节点决定
+                fun blockKind(): String = when (val parent = currentPath.parentPath?.leaf) {
+                    is MethodTree -> if (parent.name.toString() == "<init>") "构造器" else "方法 ${parent.name}"
+                    is ClassTree -> "初始化块" // javac 语法树中初始化块 = 直接挂在类体下的 BlockTree
+                    is LambdaExpressionTree -> "lambda"
+                    is IfTree -> "if"
+                    is ForLoopTree -> "for"
+                    is EnhancedForLoopTree -> "for-each"
+                    is WhileLoopTree -> "while"
+                    is DoWhileLoopTree -> "do-while"
+                    is TryTree -> "try"
+                    is CatchTree -> "catch"
+                    is SynchronizedTree -> "synchronized"
+                    is CaseTree -> "case"
+                    is BlockTree -> "嵌套语句块"
+                    else -> parent?.kind?.toString() ?: "未知"
+                }
+
+                override fun visitBlock(node: BlockTree, p: Void?): Void? {
+                    val start = sourcePositions.getStartPosition(cu, node)
+                    val end = sourcePositions.getEndPosition(cu, node)
+                    if (start >= 0 && end >= 0) {
+                        val startLine = lineMap.getLineNumber(start).toInt()
+                        val endLine = lineMap.getLineNumber(end).toInt()
+                        val span = endLine - startLine + 1
+                        if (span >= minSpan) {
+                            hitCount++
+                            val col = lineMap.getColumnNumber(start).toInt()
+                            logger.lifecycle("$relPath:$startLine:$col  {…}  ${blockKind()}  跨 $span 行")
+                        }
+                    }
+                    return super.visitBlock(node, p)
+                }
+            }
+            scanner.scan(cu, null)
+        }
+
+        logger.lifecycle("解析 $fileCount 个文件：跨行数 >= $minSpan 的语句块共 $hitCount 处（类体/数组初始化器等非语句块括号不参与统计）")
     }
 }
 

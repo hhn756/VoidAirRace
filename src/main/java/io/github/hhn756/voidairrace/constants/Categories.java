@@ -1,5 +1,6 @@
 package io.github.hhn756.voidairrace.constants;
 
+import io.github.hhn756.voidairrace.core.addons.TagEntry;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.match.CompEntry;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
@@ -30,6 +31,10 @@ public class Categories {
     /** 比赛规则 */
     public static final @NonNull CategoryId<RuleEntry<?>, NamespacedKey, DefaultSubtable<RuleEntry<?>, NamespacedKey>>
             RULE = new CategoryId<>();
+
+    /** 游戏元素标签 */
+    public static final @NonNull CategoryId<TagEntry, NamespacedKey, DefaultSubtable<TagEntry, NamespacedKey>>
+            TAG = new CategoryId<>();
 
     /** 玩家状态体系 */
     public static final @NonNull CategoryId<StateSystemEntry, String, DefaultSubtable<StateSystemEntry, String>>

@@ -202,7 +202,7 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
 
     /**
      * 流程成功时附上产出值，转为携带值的结果；失败时原样保留失败信息<br>
-     * 用于“内部步骤返回{@code OperationResult}、对外方法返回{@link ValueResult}”的分层写法
+     * 用于“内部步骤返回{@link OperationResult}、对外方法返回{@link ValueResult}”的分层写法
      *
      * @param value 流程成功时产出的值
      *

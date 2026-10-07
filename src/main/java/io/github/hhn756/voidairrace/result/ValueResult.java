@@ -22,7 +22,7 @@ import org.jspecify.annotations.Nullable;
  * <p>
  * 用法约定与{@link OperationResult}一致：<br>
  * 中间层不产生文案，只搬运键与消息，
- * 用到{@link #causedBy(String)}、键对版本{@link #causedBy(String, String)}、
+ * 用到键对版本{@link #causedBy(String, String)}、
  * 必须有值时的{@link #expectValue(String, String)}<br>
  * 最终面向玩家的调用方才调用{@link #message()}转换为用户文案，
  * 面向日志的调用方调用{@link #techMessage()}获取技术性文本
@@ -60,7 +60,7 @@ public sealed interface ValueResult<T> permits ValueResult.WithValue, ValueResul
      * 操作失败，字段职责与传播规则同{@link OperationResult.Failed}：
      * 用户消息（显示给玩家，禁止包含服务端参数）与技术性消息（仅日志，可包含服务端参数）两个通道
      * <p>
-     * 四个字段各属一个通道、各有唯一职责，向上层传播时（见{@link #causedBy(String)}）规则不同：
+     * 四个字段各属一个通道、各有唯一职责，向上层传播时（见{@link #causedBy(String, String)}）规则不同：
      * <table border="1">
      *     <tr><th>字段</th><th>通道</th><th>含义</th><th>向上层传播时</th></tr>
      *     <tr><td>{@link #reasonKey}</td><td>用户</td><td>本层失败原因的翻译键</td><td>被外层键覆盖</td></tr>
@@ -200,7 +200,7 @@ public sealed interface ValueResult<T> permits ValueResult.WithValue, ValueResul
     }
 
     /**
-     * 获取本结果的用户消息，供最终面向玩家的调用方使用。
+     * 获取本结果的用户消息，供最终面向玩家的调用方使用<br>
      * 注意：成功结果（含{@link Empty}）都返回{@code null}，所以不能凭本方法区分“无值”与“失败”
      *
      * @return 结局为{@link Failed}时同{@link Failed#message()}；成功时为{@code null}
@@ -210,7 +210,7 @@ public sealed interface ValueResult<T> permits ValueResult.WithValue, ValueResul
     }
 
     /**
-     * 获取本结果的技术性消息，供日志与控制台使用。可包含服务端参数，禁止显示给玩家。
+     * 获取本结果的技术性消息，供日志与控制台使用。可包含服务端参数，禁止显示给玩家<br>
      * 注意：成功结果（含{@link Empty}）都返回{@code null}，所以不能凭本方法区分“无值”与“失败”
      *
      * @return 结局为{@link Failed}时同{@link Failed#techMessage()}；成功时为{@code null}
@@ -222,24 +222,12 @@ public sealed interface ValueResult<T> permits ValueResult.WithValue, ValueResul
     // ------ 传播与转换 ------
 
     /**
-     * 把内层失败包装成本层失败（中间层向上传播的标准做法）：本层键覆盖{@link Failed#reasonKey}，
+     * 把内层失败包装成本层失败（中间层向上传播的标准做法）：按内层是否给得出用户消息，选用不同的本层键<br>
+     * 对应语言文件里“某操作失败（原因：{@code %s}）/某操作失败（原因未知）”这一对键；
+     * 本层键覆盖{@link Failed#reasonKey}，
      * 内层完整用户消息降级为{@link Failed#userDetail}（文案变长），
      * 技术性消息（{@link Failed#techDetail}/{@link Failed#cause}）原样透传<br>
      * 成功结局（{@link WithValue}/{@link Empty}）原样返回，不做任何事
-     *
-     * @param reasonKey 本层失败原因的翻译键
-     * */
-    default @NonNull ValueResult<T> causedBy(@Nullable String reasonKey) {
-        if (this instanceof Failed<T> f) {
-            return new Failed<>(reasonKey, f.message(), f.techDetail(), f.cause());
-        }
-        return this;
-    }
-
-    /**
-     * 键对版本的{@link #causedBy(String)}：按内层是否给得出用户消息，选用不同的本层键<br>
-     * 对应语言文件里“某操作失败（原因：{@code %s}）/某操作失败（原因未知）”这一对键；
-     * 没有这对键的调用方直接用{@link #causedBy(String)}
      *
      * @param knownReasonKey   内层有用户消息（原因已知）时使用的本层翻译键
      * @param unknownReasonKey 内层没有用户消息（原因未知）时使用的本层翻译键

@@ -363,11 +363,11 @@ public class Match {
             // 直接调用 uninstall，不处理过程中的问题（组件自行记录日志或处理）
             result = component.uninstall(this, (EA) arg);
             if (!result.isSuccess()) {
+                // 技术性消息只进日志（用户通道在此处没有发送对象）
                 logger.warning(
-                        "'卸载比赛组件 '"
+                        "卸载比赛组件 '"
                         + compName
-                        + "' 失败"
-                );
+                        + "' 失败：" + result.techMessage());
             }
         } catch (Exception e) {
             logger.warning(

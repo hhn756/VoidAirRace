@@ -27,6 +27,9 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
      */
     private final ConfigDefinition<?> definition;
 
+    /** 加载时的源文件，save()/saveAtomic() 无参形式的目标 */
+    private final @NonNull File sourceFile;
+
     @Override
     public @NonNull ConfigDefinition<?> getDefine() {
         return definition;
@@ -36,9 +39,31 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
      * 构造一个 YAML 配置对象
      *
      * @param definition 源配置文件
+     * @param sourceFile 加载时的源文件，作为无参保存的目标
      */
-    public YamlConfig(@NonNull ConfigDefinition<?> definition) {
+    public YamlConfig(@NonNull ConfigDefinition<?> definition, @NonNull File sourceFile) {
         this.definition = definition;
+        this.sourceFile = sourceFile;
+    }
+
+    /**
+     * 将配置对象在内存中已进行过的所有修改保存到加载时的源文件中<br>
+     * 注意：定义对象中的{@code filePath}只是文件名，不能用于构造保存目标（会落到进程工作目录），
+     * 因此保存一律以加载时的源文件为准
+     * */
+    @Override
+    public void save() throws ConfigException {
+        saveTo(sourceFile, 0);
+    }
+
+    /**
+     * 原子性地保存配置对象在内存中已进行过的所有修改到加载时的源文件中
+     *
+     * @throws ConfigException 如果发生 I/O 错误或原子移动不被支持且回退失败
+     * */
+    @Override
+    public void saveAtomic() throws ConfigException {
+        saveAtomic(sourceFile);
     }
 
     @Override
@@ -49,16 +74,6 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
         } catch (IOException e) {
             throw new ConfigException(e.getMessage(), e, null);
         }
-    }
-
-    /**
-     * 原子性地保存配置对象在内存中已进行过的所有修改
-     *
-     * @throws ConfigException 如果发生 I/O 错误或原子移动不支持且回退失败
-     * */
-    @Override
-    public void saveAtomic() throws ConfigException {
-        FileConfig.super.saveAtomic();
     }
 
     /**

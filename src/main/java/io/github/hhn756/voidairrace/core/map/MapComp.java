@@ -108,11 +108,14 @@ public class MapComp extends MatchComp
 
         PlayableGameMap gameMap = match.configOf(MapComp.CONFIG_KEY).map();
 
-        // 调用地图的开始方法；地图开始失败时，把地图给出的原因包装到“地图组件开始失败”键下返回
+        // 调用地图的开始方法；地图开始失败时，把地图给出的原因包装到“地图组件启动失败”键对下返回
         OperationResult startResult = gameMap.start(match);
         if (!startResult.isSuccess()) {
             return ValueResult.<MapSC>fromOperation(startResult)
-                    .causedBy(TranslateKeys.Map.MAP_COMPONENT_SELECTED_START_FAILED);
+                    .causedBy(
+                            TranslateKeys.Map.MAP_COMPONENT_SELECTED_START_FAILED,
+                            TranslateKeys.Map.MAP_COMPONENT_SELECTED_START_FAILED_UNKNOWN_CAUSE
+                    );
         }
 
         // 注册是 bukkit 事件监听器的地图

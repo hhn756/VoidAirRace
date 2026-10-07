@@ -10,7 +10,7 @@ import java.nio.file.Path;
  * 表示一个用户包的包根：既能取到可用于实际读写操作的路径，也能描述完整的来源信息<br>
  * 包形式有两种：
  * <ul>
- *   <li>目录形式：操作路径是磁盘上的目录路径，来源即该路径（{@code zipPath} 为{@code null}）</li>
+ *   <li>目录形式：操作路径是磁盘上的目录路径，来源即该路径（{@link PackageRoot#zipPath}为{@code null}）</li>
  *   <li>zip 压缩形式：操作路径是挂载文件系统内的包根路径，来源是外层 zip 文件路径
  *       与内部包根路径的组合（{@code zip路径!内部包根}，形如 {@code foo.zip!/inner}）</li>
  * </ul>
@@ -54,6 +54,19 @@ public record PackageRoot(@NonNull Path path, @Nullable Path zipPath) {
      * */
     public @NonNull String describe() {
         return zipPath == null ? path.toString() : zipPath + "!" + path;
+    }
+
+    /**
+     * 解析相对包根的路径为实际路径<br>
+     * 不做语法与越界校验——路径合法性由统一资源访问入口（PackageAccess 的路径白名单）裁定，
+     * 本方法只负责「包根 + 相对路径 → 实际路径」这一步计算
+     *
+     * @param relPath 相对包根的路径，可含多级目录（{@code /} 分隔）
+     *
+     * @return 实际路径（位于包根所在的文件系统内）
+     * */
+    public @NonNull Path resolve(@NonNull String relPath) {
+        return path.resolve(relPath);
     }
 
     @Override

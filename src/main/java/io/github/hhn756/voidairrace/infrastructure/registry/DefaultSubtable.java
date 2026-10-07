@@ -1,5 +1,6 @@
 package io.github.hhn756.voidairrace.infrastructure.registry;
 
+import io.github.hhn756.voidairrace.result.OperationResult;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -16,7 +17,7 @@ import java.util.function.Function;
  * <p>
  * 此实现的特性：
  * <p>
- * - 同一类别内注册项的键唯一，重复注册不会覆盖已有项（详见{@link #add(Object)}）
+ * - 同一类别内注册项的键唯一，重复注册返回失败且不覆盖已有项（详见{@link #add(Object)}）
  * <p>
  * - 键的计算是子表的内部行为：默认实现使用构造时注入的键计算函数，从注册项派生键。
  *   注册项类型因此不受任何约束，简单值（如{@code String}）无需包装类型即可注册
@@ -90,13 +91,20 @@ public class DefaultSubtable<I, K> {
     /**
      * 注册一项到此子表
      * <p>
-     * <strong>不覆盖已有项</strong>：若类别中已存在键相同的注册项，则保留原注册项，本次传入的注册项不会被注册
+     * <strong>不覆盖已有项</strong>：若类别中已存在键相同的注册项，则保留原注册项，
+     * 本次传入的注册项不会被注册，返回失败
      *
      * @param entry 要注册的注册项
+     *
+     * @return 注册结果；键已存在时返回失败（原有注册项不受影响），失败的技术性消息携带冲突的键
      */
-    public void add(@NonNull I entry) {
-        // putIfAbsent 保证键唯一且不覆盖已有值
-        entries.putIfAbsent(keyFn.apply(entry), entry);
+    public @NonNull OperationResult add(@NonNull I entry) {
+        K key = keyFn.apply(entry);
+        if (entries.containsKey(key)) {
+            return OperationResult.failure(null, "已存在相同键的注册项：" + key);
+        }
+        entries.put(key, entry);
+        return OperationResult.success();
     }
 
     /**

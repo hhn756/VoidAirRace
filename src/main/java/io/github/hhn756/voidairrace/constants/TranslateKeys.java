@@ -12,6 +12,8 @@ public class TranslateKeys {
         private Addons() {}
         public static final String GAME_ELEMENT_META_DEFAULT_ELEMENT_NAME = "void_air_race.addons.game_element_meta.default_element_name";
         public static final String USR_PACKAGE_API_VERSION_UNSUPPORTED = "void_air_race.addons.usr_package.api_version_unsupported";
+        public static final String USR_PACKAGE_DEPENDENCY_CYCLE = "void_air_race.addons.usr_package.dependency_cycle";
+        public static final String USR_PACKAGE_DEPENDENCY_MISSING = "void_air_race.addons.usr_package.dependency_missing";
         public static final String USR_PACKAGE_DIR_NOT_FOUND = "void_air_race.addons.usr_package.dir_not_found";
         public static final String USR_PACKAGE_ENTRY_SCRIPT_FAILED = "void_air_race.addons.usr_package.entry_script_failed";
         public static final String USR_PACKAGE_ENTRY_SCRIPT_IO_ERROR = "void_air_race.addons.usr_package.entry_script_io_error";
@@ -25,6 +27,8 @@ public class TranslateKeys {
 
     public static class Arena {
         private Arena() {}
+        public static final String ARENA_MANAGER_DIR_CONFLICT = "void_air_race.arena.arena_manager.dir_conflict";
+        public static final String ARENA_MANAGER_DIR_MISSING = "void_air_race.arena.arena_manager.dir_missing";
         public static final String ARENA_MANAGER_IO_EXCEPTION = "void_air_race.arena.arena_manager.io_exception";
         public static final String ARENA_MANAGER_NO_FREE_ARENA = "void_air_race.arena.arena_manager.no_free_arena";
         public static final String ARENA_MANAGER_TOKEN_IS_INVALID = "void_air_race.arena.arena_manager.token_is_invalid";
@@ -97,6 +101,7 @@ public class TranslateKeys {
         public static final String LOBBY_DISPLAY_VERSION = "void_air_race.map.lobby.display_version";
         public static final String LOBBY_NAME = "void_air_race.map.lobby.name";
         public static final String MAP_COMPONENT_SELECTED_START_FAILED = "void_air_race.map.map_component.selected_start_failed";
+        public static final String MAP_COMPONENT_SELECTED_START_FAILED_UNKNOWN_CAUSE = "void_air_race.map.map_component.selected_start_failed_unknown_cause";
         public static final String SMALL_TOWN_AUTHOR1 = "void_air_race.map.small_town.author1";
         public static final String SMALL_TOWN_DESCRIPTION_LINE1 = "void_air_race.map.small_town.description_line1";
         public static final String SMALL_TOWN_DISPLAY_VERSION = "void_air_race.map.small_town.display_version";

@@ -55,42 +55,43 @@ public class JarEntryUtil {
 
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
-                String entryName = entry.getName();
 
-                // 检查条目是否以源路径开头（源路径为空表示复制整个 JAR）
-                if (normalizedSource.isEmpty() || entryName.startsWith(normalizedSource)) {
-                    // 计算相对路径：去掉源路径前缀
-                    String relativePath;
-                    if (normalizedSource.isEmpty()) {
-                        relativePath = entryName;
-                    } else {
-                        // 如果 entryName 正好等于源路径（且源路径不是目录？），需要特殊处理
-                        if (entryName.equals(normalizedSource)) {
-                            relativePath = ""; // 表示文件本身
-                        } else if (entryName.startsWith(normalizedSource + "/")) {
-                            relativePath = entryName.substring(normalizedSource.length() + 1);
-                        } else {
-                            continue; // 不是子路径，跳过（理论上不会发生）
-                        }
-                    }
+                String relativePath = relativePathIfUnder(normalizedSource, entry.getName());
+                if (relativePath == null) continue;
 
-                    // 构建目标路径
-                    Path targetFile = targetRoot.resolve(relativePath).normalize();
+                // 构建目标路径
+                Path targetFile = targetRoot.resolve(relativePath).normalize();
 
-                    if (entry.isDirectory()) {
-                        // 创建目录
-                        Files.createDirectories(targetFile);
-                    } else {
-                        // 创建父目录
-                        Files.createDirectories(targetFile.getParent());
-                        // 复制文件
-                        try (InputStream is = jar.getInputStream(entry)) {
-                            Files.copy(is, targetFile, StandardCopyOption.REPLACE_EXISTING);
-                        }
+                if (entry.isDirectory()) {
+                    // 创建目录
+                    Files.createDirectories(targetFile);
+                } else {
+                    // 创建父目录
+                    Files.createDirectories(targetFile.getParent());
+                    // 复制文件
+                    try (InputStream is = jar.getInputStream(entry)) {
+                        Files.copy(is, targetFile, StandardCopyOption.REPLACE_EXISTING);
                     }
                 }
             }
         }
+    }
+
+    /**
+     * 判断一个 JAR 条目是否位于源路径之下（条目本身即源路径时也算），并计算相对源路径的路径
+     *
+     * @param normalizedSource 规范化后的源路径（不含开头与结尾斜杠；空串表示整个 JAR）
+     * @param entryName JAR 条目名
+     *
+     * @return 相对路径；条目本身即源路径时返回空串；不位于源路径之下时返回{@code null}
+     * */
+    private static String relativePathIfUnder(String normalizedSource, String entryName) {
+        if (normalizedSource.isEmpty()) return entryName;
+        if (entryName.equals(normalizedSource)) return "";
+        if (entryName.startsWith(normalizedSource + "/")) {
+            return entryName.substring(normalizedSource.length() + 1);
+        }
+        return null;
     }
 
     /**
