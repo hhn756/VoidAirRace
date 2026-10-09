@@ -4,9 +4,9 @@ import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.LogOutputStream;
-import io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.PackageRequire;
 import io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.PluginApi;
 import io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.ScriptCallGate;
+import io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.module.PackageRequire;
 import io.github.hhn756.voidairrace.exception.UsrPackageException;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.result.ValueResult;
@@ -156,7 +156,10 @@ public class PackageScriptService implements Module {
         ValueResult<Object[]> result = ScriptCallGate.call(stateContext, chunkLoader.getChunkClassLoader(), entryFn);
         if (!result.hasValue()) {
             discard(pkg.id());
-            return result;
+            return result.causedBy(
+                    TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED,
+                    TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED
+            );
         }
         // 先加载后登记：加载成功才登记包环境
         envs.put(pkg.id(), env);
@@ -193,12 +196,11 @@ public class PackageScriptService implements Module {
         env.rawset(ByteString.of("dofile"), null);
         env.rawset(ByteString.of("loadfile"), null);
 
-        env.rawset(ByteString.of(
-                "voidairrace"),
+        env.rawset(ByteString.of("voidairrace"),
                 PluginApi.build(stateContext, chunkLoader.getChunkClassLoader(), pkg, packageResolver)
         );
 
-        PackageRequire.install(chunkLoader, env, pkg, packageResolver, envs, moduleFnCache);
+        PackageRequire.installInto(chunkLoader, env, pkg, packageResolver, envs, moduleFnCache);
         return env;
     }
 

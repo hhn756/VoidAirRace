@@ -108,6 +108,7 @@ public class UsrPackage {
      * @return 实际路径
      * */
     public @NonNull Path resolve(@NonNull String relPath) {
+        // 外部实例化时能传入正确文件系统的 root 对象，使此处始终能相对真正的包根目录
         return root.resolve(relPath);
     }
 

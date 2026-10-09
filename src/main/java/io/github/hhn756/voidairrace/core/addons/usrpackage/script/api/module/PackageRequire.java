@@ -1,6 +1,7 @@
-package io.github.hhn756.voidairrace.core.addons.usrpackage.script.api;
+package io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.module;
 
 import io.github.hhn756.voidairrace.core.addons.usrpackage.UsrPackage;
+import io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.PackageAccess;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.LuaRuntimeException;
 import net.sandius.rembulan.Table;
@@ -19,7 +20,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * 包脚本的{@code require}实现（纯 Java）<br>
+ * 模块引用类别的 Lua API 入口：全局函数{@code require(modname)}<br>
  * require 需要<strong>执行</strong>模块主函数并等待其返回值，而模块执行期间可能让出（协程），
  * 因此实现为<strong>可恢复函数</strong>，分两个阶段（惯用法与 rembulan 标准库的{@code pcall}一致）：
  * <ul>
@@ -38,6 +39,8 @@ import java.util.function.Function;
  *     <li>执行缓存（{@code loaded}）每包一份，记录模块的<strong>执行结果</strong>：
  *         同一包内重复 require 直接取缓存；循环依赖期间以{@code true}占位防重入</li>
  * </ul>
+ * 本类是类别入口：装配期由{@code PackageScriptService}直接调用{@link #installInto}注入包环境
+ * <p>
  * 本类非线程安全（调用全部发生在主线程）
  * */
 public final class PackageRequire {
@@ -45,7 +48,7 @@ public final class PackageRequire {
     private PackageRequire() {}
 
     /**
-     * 在指定包环境内装配{@code require}
+     * 把本类别的 API 函数注入指定包环境（全局表）
      *
      * @param loader   用户脚本 chunk 加载器
      * @param env      目标包环境（全局表），即所属包的环境
@@ -54,7 +57,7 @@ public final class PackageRequire {
      * @param envs     包 Id → 已加载包环境的记录表，供跨包 require 查询目标包环境
      * @param fnCache  模块缓存键 → 已编译函数的缓存表，跨包共享
      * */
-    public static void install(
+    public static void installInto(
             @NonNull CompilerChunkLoader loader,
             @NonNull Table env,
             @NonNull UsrPackage owner,

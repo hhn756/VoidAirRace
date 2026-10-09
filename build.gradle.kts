@@ -278,6 +278,40 @@ tasks.register("findLongBracketPairs") {
     }
 }
 
+/*
+ * 统计主源码集（src/main）全部 .java 文件中的非空行数
+ * 非空行 = 去除行首行尾空白后仍有内容的行（纯空白行不计）
+ * 用法：gradlew countNonEmptyLines [-Pdetail]（带 detail 时逐文件列出各自非空行数）
+ */
+tasks.register("countNonEmptyLines") {
+    group = "inspection"
+    description = "统计 src/main 下所有 .java 文件的非空行数"
+
+    doLast {
+        val srcDir = file("src/main")
+        if (!srcDir.isDirectory) throw GradleException("目录不存在：$srcDir")
+        val files = srcDir.walkTopDown()
+            .filter { it.isFile && it.extension == "java" }
+            .toList()
+        if (files.isEmpty()) {
+            logger.lifecycle("目录下没有 .java 文件：$srcDir")
+            return@doLast
+        }
+
+        var total = 0L
+        // 文件按相对路径排序，保证输出确定
+        val perFile = files.associate { f ->
+            val count = f.readText(Charsets.UTF_8).lineSequence().count { it.isNotBlank() }
+            total += count
+            srcDir.toPath().relativize(f.toPath()).toString() to count
+        }.toSortedMap()
+
+        if (project.hasProperty("detail"))
+            perFile.forEach { (path, count) -> logger.lifecycle("$path  $count") }
+        logger.lifecycle("共 ${files.size} 个 .java 文件，非空行总计 $total 行")
+    }
+}
+
 tasks.withType<JavaCompile> {
     options.encoding = "utf-8"
 }

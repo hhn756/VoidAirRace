@@ -16,6 +16,9 @@ import java.nio.file.Path;
  * </ul>
  * 实例由包管理器与包加载器经{@link #ofDirectory}/{@link #ofZip}构造，随包对象存在<br>
  * 值语义：相等性由两个成员共同决定
+ *
+ * @param zipPath 包所在zip文件的路径
+ * @param path 包所在目录的路径 或 实际包根目录在其所在zip文件中的路径
  * */
 public record PackageRoot(@NonNull Path path, @Nullable Path zipPath) {
     /**
@@ -30,15 +33,21 @@ public record PackageRoot(@NonNull Path path, @Nullable Path zipPath) {
 
     /**
      * 以磁盘目录为包根（目录形式）
+     *
+     * @param dir 包根目录路径
      * */
     static @NonNull PackageRoot ofDirectory(@NonNull Path dir) {
         return new PackageRoot(dir, null);
     }
 
     /**
-     * 以 zip 挂载文件系统内的路径为包根（zip 压缩形式）
+     * 以 zip 挂载文件系统内的路径为包根（zip 压缩形式）<br>
+     * 参数顺序与 record 组件一致：操作路径在前，zip 来源路径在后
+     *
+     * @param rootInZip zip 文件中的实际包根目录的路径（位于挂载文件系统内）
+     * @param zipPath   包所在 zip 文件路径
      * */
-    static @NonNull PackageRoot ofZip(@NonNull Path zipPath, @NonNull Path rootInZip) {
+    static @NonNull PackageRoot ofZip(@NonNull Path rootInZip, @NonNull Path zipPath) {
         return new PackageRoot(rootInZip, zipPath);
     }
 

@@ -23,7 +23,4 @@ public class TagRegistrar implements Module {
         // 定义“游戏元素标签”类别，键计算：注册项所记录的标签 Id
         registry.createCategory(Categories.TAG, TagEntry::getKey);
     }
-
-    /** 插件禁用时执行 */
-    private void onUnload() {}
 }

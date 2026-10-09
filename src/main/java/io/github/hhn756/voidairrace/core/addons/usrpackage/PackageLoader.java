@@ -89,13 +89,13 @@ public class PackageLoader implements Module {
                 closeZip(fs, entry, logger);
                 continue;
             }
-            roots.add(PackageRoot.ofZip(entry, rootInZip));
+            roots.add(PackageRoot.ofZip(rootInZip, entry));
             mounted.add(new MountedZip(entry, fs));
         }
 
         List<PackageManager.PackageLoadResult> results = packageManager.loadAll(roots);
 
-        // 紧凑汇报：同类结果合并为一行，避免逐包刷屏；意外异常（含堆栈）仍逐条记录。
+        // 紧凑汇报：同类结果合并为一行，避免逐包刷屏；意外异常（含堆栈）仍逐条记录
         // 未启用与其他失败的条目以来源简称标识（失败结果不携带包 Id），已加载条目以包 Id 标识
         List<String> loadedIds = new ArrayList<>();
         List<String> notEnabledNames = new ArrayList<>();
@@ -196,7 +196,7 @@ public class PackageLoader implements Module {
      * @param zipPath zip 文件路径
      * @param logger 日志器
      *
-     * @return 挂载成功返回文件系统；失败返回{@code null}（已记录日志）
+     * @return 挂载成功返回文件系统；失败返回{@code null}并记录日志
      * */
     private static @Nullable FileSystem mountZip(@NonNull Path zipPath, @NonNull Logger logger) {
         try {

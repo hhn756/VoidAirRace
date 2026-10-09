@@ -1,8 +1,9 @@
-package io.github.hhn756.voidairrace.core.addons.usrpackage.script.api;
+package io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.register;
 
 import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.addons.UserRule;
+import io.github.hhn756.voidairrace.core.addons.usrpackage.script.api.ScriptCallGate;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
@@ -20,6 +21,8 @@ import org.jspecify.annotations.Nullable;
  * 并持有该实例专属的 Match 空句柄表（真实 Match 句柄将在后续版本引入，届时填充同一张表）
  * <p>
  * 所有 Lua 调用经{@link ScriptCallGate}：主线程断言、指令预算与异常映射由其统一处理
+ * <p>
+ * 归属元素注册类别：仅规则注册使用回调适配器，与{@code RegisterApi}同包封装
  * */
 final class LuaRuleCallback implements UserRule.Callback {
     private final @NonNull StateContext stateContext;

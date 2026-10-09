@@ -1,6 +1,5 @@
 package io.github.hhn756.voidairrace.core.addons.usrpackage.script.api;
 
-import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.exec.CallException;
@@ -36,6 +35,10 @@ public final class ScriptCallGate {
 
     /**
      * 调用一个 Lua 函数并等待其执行完成
+     * <p>
+     * 失败结果的{@code reasonKey}为{@code null}：本类是所有 Lua 调用的共用横切层，
+     * 不绑定具体业务语义（入口脚本 / 回调 / 未来其他调用各有各的用户通道键），
+     * 由调用方按自身语义用{@code causedBy}包上自己的键；技术性描述（含 Lua 调用栈）照常携带
      *
      * @param stateContext     Lua 状态上下文
      * @param chunkClassLoader 与编译用户 chunk 所用一致的类加载器，用于生成 Lua 风格调用栈文本
@@ -59,14 +62,14 @@ public final class ScriptCallGate {
         } catch (CallPausedException e) {
             // 两种来源：预算耗尽被调度器暂停；主协程顶层让出（沙箱不支持让出恢复）
             return ValueResult.failure(
-                    TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED,
+                    null,
                     null,
                     "脚本执行中止：指令预算（" + DEFAULT_TICK_LIMIT + " ticks）耗尽，或在顶层让出",
                     e
             );
         } catch (CallException e) {
             return ValueResult.failure(
-                    TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED,
+                    null,
                     null,
                     "脚本执行出错：" + describe(e, chunkClassLoader),
                     e.getCause()
@@ -74,7 +77,7 @@ public final class ScriptCallGate {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return ValueResult.failure(
-                    TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED,
+                    null,
                     null,
                     "脚本执行被中断",
                     e
