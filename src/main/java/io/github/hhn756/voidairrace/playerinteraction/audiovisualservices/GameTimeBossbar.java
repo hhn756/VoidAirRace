@@ -7,7 +7,6 @@ import io.github.hhn756.voidairrace.core.match.basecomponents.gametime.GameTimeC
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
 import io.github.hhn756.voidairrace.event.MatchStartedEvent;
 import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;
-import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.AutoRegistration;
 import io.github.hhn756.voidairrace.infrastructure.util.Percentage;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -20,7 +19,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 /**
  * 管理比赛内用于显示剩余游戏时间的bossbar
  * */
-@AutoRegistration
 public class GameTimeBossbar implements Listener {
     BossBar bossbar;
 

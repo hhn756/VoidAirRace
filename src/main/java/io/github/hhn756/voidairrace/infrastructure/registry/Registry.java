@@ -2,6 +2,7 @@ package io.github.hhn756.voidairrace.infrastructure.registry;
 
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,13 +33,13 @@ import java.util.function.Function;
  * 注册项类型不受约束，简单值（如{@code String}）无需包装类型即可注册
  */
 public class Registry implements Module {
-    private static Registry instance;
+    private static @Nullable Registry instance;
 
     // 类别标识 → 子表实例
-    private final Map<CategoryId<?, ?, ?>, DefaultSubtable<?, ?>> subtables = new HashMap<>();
+    private final @NonNull Map<CategoryId<?, ?, ?>, DefaultSubtable<?, ?>> subtables = new HashMap<>();
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of();
     }
 

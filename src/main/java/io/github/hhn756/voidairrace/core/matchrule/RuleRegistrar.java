@@ -4,6 +4,7 @@ import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.core.matchrule.generalrules.BasicEndDetermination;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.List;
  * */
 public class RuleRegistrar implements Module {
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of(Registry.class);
     }
 
@@ -22,9 +23,6 @@ public class RuleRegistrar implements Module {
     private void onLoad() {
         registerRules();
     }
-
-    /** 插件禁用时执行 */
-    private void onUnload() {}
 
     /**
      * 创建“比赛规则”注册项类别，然后注册插件内所有内建比赛规则

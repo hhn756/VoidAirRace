@@ -4,7 +4,11 @@ import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
+import org.bukkit.Bukkit;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -18,8 +22,9 @@ import java.util.logging.Logger;
  * <ul>
  *   <li>引导阶段任务（{@link BootstrapStage}）：{@link #bootstrapAll(BootstrapContext)} 由 {@code Bootstrap}
  *       在插件引导阶段调用，扫描全部实现类并逐个执行一次 {@code onBootstrap}，无卸载概念</li>
- *   <li>普通模块（{@link Module}）：{@link #loadAll(Collection)} 在插件启用时调用，按前置声明拓扑排序加载；
- *       {@link #unloadAll()} 在插件禁用时逆序卸载</li>
+ * <li>普通模块（{@link Module}）：{@link #loadAll(Collection)} 在插件启用时调用，按前置声明拓扑排序加载；
+ *       {@link #unloadAll()} 在插件禁用时逆序卸载。模块实现 {@link ListenerProvider} 契约时，
+ *       其声明的 Bukkit 事件监听器在 {@code onLoad} 成功后注册、卸载或回滚时反注册</li>
  * </ul>
  * 供非模块代码获取普通模块单例的方法是 {@link #getModule(Class)}
  *
@@ -46,6 +51,11 @@ public final class Modules {
      * 本次插件启用的模块列表，用于把主类传入的列表跨插件生命周期保留下来
      * */
     private static List<Class<? extends Module>> declaredModules = List.of();
+
+    /**
+     * 模块类 -> 该模块已注册的监听器列表；卸载与回滚时按此反注册
+     * */
+    private static final @NonNull Map<Class<? extends Module>, List<Listener>> REGISTERED_LISTENERS = new HashMap<>();
 
     private Modules() {
     }
@@ -75,7 +85,7 @@ public final class Modules {
             try {
                 BootstrapStage stage = createInstance(stageClass);
                 stage.onBootstrap(context);
-                logger.debug("已引导: {}", stageClass.getSimpleName());
+                logger.debug("BootstrapStage {} 执行完成", stageClass.getSimpleName());
             } catch (Exception e) {
                 logger.error("引导阶段任务 {} 执行失败", stageClass.getName(), e);
             }
@@ -91,8 +101,7 @@ public final class Modules {
      *
      * @throws IllegalStateException 校验失败、循环依赖或模块加载失败
      * */
-    public static synchronized void loadAll(Collection<? extends Class<? extends Module>> modules) {
-        if (modules == null) throw new IllegalStateException("待加载模块列表为 null");
+    public static synchronized void loadAll(@NonNull Collection<? extends Class<? extends Module>> modules) {
         if (!INSTANCES.isEmpty()) throw new IllegalStateException("模块已加载，不能在同一次插件启用中重复加载");
 
         declaredModules = List.copyOf(modules);
@@ -127,6 +136,13 @@ public final class Modules {
                 rollback();
                 throw new IllegalStateException("模块 " + display(moduleClass) + " 加载失败，已回滚全部模块", failure);
             }
+            try {
+                registerListeners(moduleClass);
+            } catch (Throwable failure) {
+                logger().severe("模块 " + display(moduleClass) + " 的事件监听器注册失败，开始回滚 " + LOADED.size() + " 个已加载模块");
+                rollback();
+                throw new IllegalStateException("模块 " + display(moduleClass) + " 加载失败（事件监听器注册失败），已回滚全部模块", failure);
+            }
         }
 
         logger().fine("模块加载器：全部 " + LOADED.size() + " 个模块加载完成");
@@ -147,6 +163,7 @@ public final class Modules {
         List<Class<? extends Module>> snapshot = new ArrayList<>(LOADED);
         for (int i = snapshot.size() - 1; i >= 0; i--) {
             Class<? extends Module> moduleClass = snapshot.get(i);
+            unregisterListeners(moduleClass);
             try {
                 invoke(moduleClass, "onUnload");
             } catch (Throwable failure) {
@@ -289,13 +306,14 @@ public final class Modules {
 
     /**
      * 加载前对一个模块做完整静态校验：<br>
-     * {@code onLoad} / {@code onUnload} 各自必须恰好声明一个、返回 void，
+     * {@code onLoad} / {@code onUnload} 若声明则各自必须至多一个、返回 void，
      * 且每个参数都能从前置模块中唯一解析出注入目标
      * */
     private static void validateLifecycleMethods(Class<? extends Module> moduleClass) {
         Set<Class<? extends Module>> required = REQUIRED.getOrDefault(moduleClass, Set.of());
         for (String methodName : List.of("onLoad", "onUnload")) {
             Method method = findUniqueDeclaredMethod(moduleClass, methodName);
+            if (method == null) continue; // 未声明该方法：此生命周期阶段无操作，无需校验参数
             Class<?>[] parameterTypes = method.getParameterTypes();
             for (int index = 0; index < parameterTypes.length; index++) {
                 resolveArgument(moduleClass, methodName, index, parameterTypes[index], required);
@@ -304,11 +322,13 @@ public final class Modules {
     }
 
     /**
-     * 解析并反射调用模块自身声明的 {@code onLoad} 或 {@code onUnload}
+     * 解析并反射调用模块自身声明的 {@code onLoad} 或 {@code onUnload}；<br>
+     * 模块未声明该方法时为无操作，直接返回
      * */
     private static void invoke(Class<? extends Module> moduleClass, String methodName) {
         Module self = INSTANCES.get(moduleClass);
         Method method = findUniqueDeclaredMethod(moduleClass, methodName);
+        if (method == null) return; // 未声明该方法：此生命周期阶段不执行
         method.setAccessible(true);
 
         Class<?>[] parameterTypes = method.getParameterTypes();
@@ -330,17 +350,19 @@ public final class Modules {
     }
 
     /**
-     * 防止错误实现：模块类自身声明（不含继承）的该方法必须恰好一个
+     * 查找模块类自身声明（不含继承）的该方法；未声明时返回 null<br>
+     * 防止错误实现：声明多个或返回类型非 void 视为错误
      * */
-    private static Method findUniqueDeclaredMethod(Class<? extends Module> moduleClass, String methodName) {
+    private static @Nullable Method findUniqueDeclaredMethod(Class<? extends Module> moduleClass, String methodName) {
         List<Method> candidates = new ArrayList<>();
         for (Method method : moduleClass.getDeclaredMethods()) {
             if (method.isBridge() || method.isSynthetic()) continue;
             if (method.getName().equals(methodName)) candidates.add(method);
         }
+        if (candidates.isEmpty()) return null;
         if (candidates.size() != 1) {
             throw new IllegalStateException(
-                    "模块 " + display(moduleClass) + " 自身声明的 " + methodName + " 方法数量为 " + candidates.size() + "，必须恰好为 1");
+                    "模块 " + display(moduleClass) + " 自身声明的 " + methodName + " 方法数量为 " + candidates.size() + "，必须至多为 1");
         }
         Method method = candidates.get(0);
         if (method.getReturnType() != void.class) {
@@ -396,6 +418,7 @@ public final class Modules {
         List<Class<? extends Module>> snapshot = new ArrayList<>(LOADED);
         for (int i = snapshot.size() - 1; i >= 0; i--) {
             Class<? extends Module> moduleClass = snapshot.get(i);
+            unregisterListeners(moduleClass);
             try {
                 invoke(moduleClass, "onUnload");
             } catch (Throwable failure) {
@@ -409,7 +432,62 @@ public final class Modules {
         LOADED.clear();
         INSTANCES.clear();
         REQUIRED.clear();
+        REGISTERED_LISTENERS.clear();
         declaredModules = List.of();
+    }
+
+    /**
+     * 注册模块声明的事件监听器：模块实现 {@link ListenerProvider} 契约时，
+     * 调用其 {@code getListeners()} 并把返回的监听器逐个注册到 Bukkit；<br>
+     * 模块未实现契约或返回 null（按无监听器处理并记录警告）时不注册
+     * <p>
+     * 已注册的监听器即时登记到 {@link #REGISTERED_LISTENERS}（先登记后注册循环），
+     * 保证注册中途失败时已注册的部分也能被回滚清理
+     *
+     * @throws IllegalStateException {@code getListeners} 执行失败、返回集合包含 null 或任一监听器注册失败
+     * */
+    private static void registerListeners(Class<? extends Module> moduleClass) {
+        Module instance = INSTANCES.get(moduleClass);
+        if (!(instance instanceof ListenerProvider provider)) return;
+
+        Collection<Listener> declared;
+        try {
+            declared = provider.getListeners();
+        } catch (Throwable failure) {
+            throw new IllegalStateException("模块 " + display(moduleClass) + " 的 getListeners 执行失败", failure);
+        }
+        if (declared == null) {
+            logger().warning("模块 " + display(moduleClass) + " 的 getListeners 返回 null，按无监听器处理");
+            return;
+        }
+
+        List<Listener> registered = new ArrayList<>();
+        REGISTERED_LISTENERS.put(moduleClass, registered);
+        for (Listener listener : declared) {
+            if (listener == null) {
+                throw new IllegalStateException("模块 " + display(moduleClass) + " 的 getListeners 返回集合包含 null");
+            }
+            try {
+                Bukkit.getPluginManager().registerEvents(listener, VoidAirRace.getInstance());
+            } catch (Throwable failure) {
+                throw new IllegalStateException("模块 " + display(moduleClass) + " 的事件监听器注册失败："
+                        + listener.getClass().getName(), failure);
+            }
+            registered.add(listener);
+        }
+        logger().fine("模块 " + display(moduleClass) + " 注册了 " + registered.size() + " 个事件监听器");
+    }
+
+    /**
+     * 反注册模块注册的全部事件监听器；模块未注册过任何监听器时为无操作
+     * */
+    private static void unregisterListeners(Class<? extends Module> moduleClass) {
+        List<Listener> registered = REGISTERED_LISTENERS.remove(moduleClass);
+        if (registered == null) return;
+        for (Listener listener : registered) {
+            HandlerList.unregisterAll(listener);
+        }
+        logger().fine("模块 " + display(moduleClass) + " 反注册了 " + registered.size() + " 个事件监听器");
     }
 
     private static String describeClasses(Collection<? extends Class<?>> classes) {

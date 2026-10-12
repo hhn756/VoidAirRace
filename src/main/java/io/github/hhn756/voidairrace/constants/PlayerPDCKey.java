@@ -25,11 +25,11 @@ public enum PlayerPDCKey {
         this.type = type;
     }
 
-    public NamespacedKey getValue() {
+    public NamespacedKey path() {
         return value;
     }
 
-    public Class<?> getType() {
+    public Class<?> type() {
         return type;
     }
 }

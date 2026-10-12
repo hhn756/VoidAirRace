@@ -1,7 +1,7 @@
 package io.github.hhn756.voidairrace.core.map;
 
+import io.github.hhn756.voidairrace.addons.GameElement;
 import io.github.hhn756.voidairrace.constants.Plugin;
-import io.github.hhn756.voidairrace.core.addons.GameElement;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NonNull;
@@ -18,7 +18,7 @@ public abstract class GameMap implements GameElement {
      * 子类未指定其ID时方法所用的默认地图ID<br>
      * 系统保留此ID，不可被任何地图使用
      * */
-    public static final NamespacedKey DEFAULT_MAP_ID = Plugin.key("game_map_default_id");
+    public static final @NonNull NamespacedKey DEFAULT_MAP_ID = Plugin.key("game_map_default_id");
 
     /**
      * 插件首次启用或执行重新初始化命令时执行<br>
@@ -26,7 +26,7 @@ public abstract class GameMap implements GameElement {
      *
      * @return 当返回的 {@link CompletableFuture} 正常完成时，地图将被标记为“已初始化”
      * */
-    public @NonNull CompletableFuture<?> initAsync(JavaPlugin mainClass) {
+    public @NonNull CompletableFuture<?> initAsync(@NonNull JavaPlugin mainClass) {
         return CompletableFuture.completedFuture(null);
     }
 

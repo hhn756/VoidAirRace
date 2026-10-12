@@ -54,17 +54,17 @@ public class DefaultSubtable<I, K> {
     /**
      * 使用子表实例的类别的标识
      * */
-    protected final CategoryId<I, K, ? extends DefaultSubtable<I, K>> id;
+    protected final @NonNull CategoryId<I, K, ? extends DefaultSubtable<I, K>> id;
 
     /**
      * 键计算函数，本子表内部行为的组成部分，{@link #add(Object)}用其从注册项派生键
      * */
-    protected final Function<I, K> keyFn;
+    protected final @NonNull Function<I, K> keyFn;
 
     /**
      * 本子表：键 → 注册项
      */
-    protected final Map<K, I> entries = new HashMap<>();
+    protected final @NonNull Map<K, I> entries = new HashMap<>();
 
     /**
      * 构造子表实例的基类部分，供默认实现及子类链构造使用
@@ -113,7 +113,7 @@ public class DefaultSubtable<I, K> {
      *
      * @param key 要注销注册项的键
      */
-    public void remove(K key) {
+    public void remove(@NonNull K key) {
         entries.remove(key);
     }
 
@@ -124,20 +124,20 @@ public class DefaultSubtable<I, K> {
      *
      * @return 注册项，该键未注册时返回{@code null}
      */
-    public @Nullable I get(K key) {
+    public @Nullable I get(@NonNull K key) {
         return entries.get(key);
     }
 
     /**
-     * 检查指定键是否已注册<br>
-     * 即指定键是否能在此子表中找到对应的、已记录的值
+     * 检查指定注册项是否已注册<br>
+     * 以键计算函数从注册项派生键，再按键查询，等价于调用{@link #isRegistered(Object)}并传入派生的键
      *
-     * @param key 指定键
+     * @param entry 指定注册项
      *
-     * @return 指定项已注册返回{@code true}，否则返回{@code false}
+     * @return 该注册项对应的键已注册返回{@code true}，否则返回{@code false}
      */
-    public boolean isRegistered(K key) {
-        return entries.containsKey(key);
+    public boolean isRegistered(@NonNull I entry) {
+        return entries.containsKey(keyFn.apply(entry));
     }
 
     /**

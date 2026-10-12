@@ -1,9 +1,9 @@
 package io.github.hhn756.voidairrace.core.map.maps.grassland;
 
 import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
-import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.core.map.PlayableGameMap;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.basecomponents.contestant.ContestantComp;
@@ -166,7 +166,7 @@ public class GrassLand extends PlayableGameMap implements Listener {
                 String techMessage = enableRuleResult.techMessage();
                 if (techMessage != null) {
                     VoidAirRace.getInstance().getLogger()
-                            .warning("草地地图启用规则 " + ruleId + " 失败：" + techMessage);
+                            .warning("草地地图启用比赛规则 " + ruleId + " 失败：" + techMessage);
                 }
             }
         }

@@ -50,6 +50,8 @@
   "void_air_race.map.create_default_config.map_not_playable": "默认地图不可游玩",
   "void_air_race.map.map_component.selected_start_failed": "地图组件启动失败",
   "void_air_race.map.map_component.selected_start_failed_unknown_cause": "地图组件启动失败：未知原因",
+
+  "void_air_race.map.lua_map.start_failed": "用户地图启动失败",
   
   "void_air_race.map.grass_land.name": "草原",
   "void_air_race.map.grass_land.description_line1": "",
@@ -151,5 +153,6 @@
   "void_air_race.addons.usr_package.entry_script_io_error": "读取用户包入口脚本时发生 IO 异常",
   "void_air_race.addons.usr_package.package_not_enabled": "用户包 %s 未启用",
   "void_air_race.addons.usr_package.dependency_missing": "依赖的用户包 %s 未加载",
-  "void_air_race.addons.usr_package.dependency_cycle": "用户包存在循环依赖"
+  "void_air_race.addons.usr_package.dependency_cycle": "用户包存在循环依赖",
+  "void_air_race.addons.usr_package.not_loaded": "无法卸载，用户包 %s 未加载"
 }

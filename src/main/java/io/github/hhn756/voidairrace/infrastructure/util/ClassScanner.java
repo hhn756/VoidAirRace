@@ -175,7 +175,8 @@ public class ClassScanner {
                 }
             } catch (Throwable t) {
                 // 单个类加载失败不阻断其余（链接错误一并容错）
-                VoidAirRace.getInstance().getLogger().warning("无法加载索引中的类: " + className);
+                VoidAirRace.getInstance().getLogger().warning(
+                        "无法加载子类索引中的类 " + className + "：" + t);
             }
         }
         return Collections.unmodifiableList(result);

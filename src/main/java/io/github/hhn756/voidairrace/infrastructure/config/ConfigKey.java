@@ -17,11 +17,11 @@ public class ConfigKey<T> {
     /**
      * 键路径
      * */
-    private final String path;
+    private final @NonNull String path;
     /**
      * 缓存提取出来的完整泛型类型
      */
-    private final Type type;
+    private final @NonNull Type type;
     /**
      * 默认值。可为{@code null}（该键不写入默认配置文件）<br>
      * 必须是 Bukkit YAML 可序列化的对象（基本类型、{@link String}、{@link java.util.List}、
@@ -62,15 +62,19 @@ public class ConfigKey<T> {
 
     /**
      * 获取键对象对应的物理键路径
+     *
+     * @return 键路径
      * */
-    public String path() {
+    public @NonNull String path() {
         return path;
     }
 
     /**
      * 获取字段的预期类型
+     *
+     * @return 预期类型
      * */
-    public Type type() {
+    public @NonNull Type type() {
         return type;
     }
 

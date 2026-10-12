@@ -24,7 +24,7 @@ public interface ConfigurableComp<
      *
      * @return 该组件用来存储配置数据的 Key
      * */
-    default DataKey<CFG> getConfigKey() {
+    default @NonNull DataKey<CFG> getConfigKey() {
         return DataKey.of(null, null);
     };
 

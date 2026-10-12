@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -14,9 +15,9 @@ import java.util.*;
  * 管理玩家队伍，只允许使用 {@link Teams} 枚举中定义的队伍
  * */
 public class TeamRoster implements Module {
-    private static TeamRoster instance;
+    private static @Nullable TeamRoster instance;
 
-    public static TeamRoster getInstance() {
+    public static @NonNull TeamRoster getInstance() {
         if (instance == null) throw new NullPointerException("队伍花名册实例不存在");
         return instance;
     }
@@ -24,13 +25,13 @@ public class TeamRoster implements Module {
     // ------
 
     private @NonNull Scoreboard teamScb;
-    private final @NonNull LinkedHashMap<Teams, Team> enumToTeamMap = new LinkedHashMap<>();
-    private final @NonNull LinkedHashMap<Team, Teams> teamToEnumMap = new LinkedHashMap<>();
+    private final @NonNull LinkedHashMap<@NonNull Teams, @NonNull Team> enumToTeamMap = new LinkedHashMap<>();
+    private final @NonNull LinkedHashMap<@NonNull Team, @NonNull Teams> teamToEnumMap = new LinkedHashMap<>();
 
     private TeamRoster() {}
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of();
     }
 
@@ -121,14 +122,14 @@ public class TeamRoster implements Module {
      * @param entity 指定实体
      * @return 队伍实例
      * */
-    public Team getTeam(@NonNull Entity entity) throws IllegalStateException {
+    public @Nullable Team getTeam(@NonNull Entity entity) throws IllegalStateException {
         return teamScb.getEntityTeam(entity);
     }
 
     /**
      * 获取队伍枚举值对应的队伍实例
      * */
-    public Team enumToTeam(@NonNull Teams team) {
+    public @NonNull Team enumToTeam(@NonNull Teams team) {
         return enumToTeamMap.get(team);
     }
 
@@ -136,7 +137,7 @@ public class TeamRoster implements Module {
      * 获取队伍实例对应的队伍枚举值，
      * 如果传入的对象不是本类实例化的队伍实例则返回 {@code null}
      * */
-    public Teams teamToEnum(@NonNull Team team) {
+    public @Nullable Teams teamToEnum(@NonNull Team team) {
         return teamToEnumMap.get(team);
     }
 
@@ -145,14 +146,14 @@ public class TeamRoster implements Module {
      *
      * @return 队伍实例列表的不可变视图
      * */
-    public @NonNull Collection<Team> getAllTeams() {
+    public @NonNull Collection<@NonNull Team> getAllTeams() {
         return Collections.unmodifiableCollection(enumToTeamMap.values());
     }
 
     /**
      * 获取队伍集合中的前 n 个队伍实例
      * */
-    public @NonNull List<Team> getFirstNTeams(int n) {
+    public @NonNull List<@NonNull Team> getFirstNTeams(int n) {
         if (n <= 0) return Collections.emptyList();
         List<Team> allTeams = new ArrayList<>(enumToTeamMap.values()); // teamMap 按枚举顺序插入，所以顺序固定
         return allTeams.subList(0, Math.min(n, allTeams.size()));

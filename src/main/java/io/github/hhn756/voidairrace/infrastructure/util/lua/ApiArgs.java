@@ -16,7 +16,7 @@ public final class ApiArgs {
      * 校验参数为 Lua 字符串并转为 Java 字符串
      *
      * @param arg  参数原值
-     * @param what 参数用途说明，用于错误消息
+     * @param what 参数用途说明，用于错误消息（最终消息为{@code what + "必须是字符串"}）
      * */
     public static @NonNull String expectString(@Nullable Object arg, @NonNull String what) {
         if (arg instanceof ByteString bs) return bs.decode();

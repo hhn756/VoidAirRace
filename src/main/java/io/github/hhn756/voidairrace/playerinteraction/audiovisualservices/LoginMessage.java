@@ -1,7 +1,6 @@
 package io.github.hhn756.voidairrace.playerinteraction.audiovisualservices;
 
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
-import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.AutoRegistration;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
@@ -13,7 +12,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 /**
  * 用于向玩家显示加入服务器时的提示消息
  * */
-@AutoRegistration
 public class LoginMessage implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerJoin(PlayerJoinEvent event) {

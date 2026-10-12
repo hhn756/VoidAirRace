@@ -8,6 +8,7 @@ import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
 import io.github.hhn756.voidairrace.result.OperationResult;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.logging.Logger;
  * */
 public class ComponentRegistrar implements Module {
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of(Registry.class);
     }
 
@@ -29,9 +30,6 @@ public class ComponentRegistrar implements Module {
     private void onLoad() {
         registerComponents();
     }
-
-    /** 插件禁用时执行 */
-    private void onUnload() {}
 
     /**
      * 添加“比赛组件”注册项类别，然后扫描并注册插件中所有比赛组件实现类

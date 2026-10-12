@@ -19,10 +19,10 @@ import java.util.List;
  * 单例模式，通过 {@link #getInstance()} 获取实例
  */
 public class MatchCoordinator implements Module {
-    private static MatchCoordinator instance;
+    private static @Nullable MatchCoordinator instance;
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of(Config.class, ComponentRegistrar.class);
     }
 
@@ -62,7 +62,7 @@ public class MatchCoordinator implements Module {
      * @return 协调器实例
      * @throws IllegalStateException 如果实例尚未初始化（未调用带参的 getInstance）
      */
-    public static MatchCoordinator getInstance() throws NullPointerException {
+    public static @NonNull MatchCoordinator getInstance() throws NullPointerException {
         if (instance == null) throw new NullPointerException("比赛协调器实例不存在");
         return instance;
     }

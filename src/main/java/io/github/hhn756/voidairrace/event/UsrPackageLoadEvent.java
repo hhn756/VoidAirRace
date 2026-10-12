@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.event;
 
-import io.github.hhn756.voidairrace.core.addons.usrpackage.UsrPackage;
+import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jspecify.annotations.NonNull;

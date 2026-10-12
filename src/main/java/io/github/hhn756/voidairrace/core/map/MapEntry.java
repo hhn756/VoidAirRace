@@ -1,14 +1,14 @@
 package io.github.hhn756.voidairrace.core.map;
 
-import io.github.hhn756.voidairrace.core.addons.GameElement;
-import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
+import io.github.hhn756.voidairrace.addons.GameElement;
+import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.exception.RegistryException;
 import org.bukkit.NamespacedKey;
 import org.jetbrains.annotations.Range;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.lang.reflect.Constructor;
+import java.util.function.Supplier;
 
 /**
  * 用于在注册表中记录一个地图
@@ -16,8 +16,8 @@ import java.lang.reflect.Constructor;
 public class MapEntry implements GameElement {
     /** 地图的元数据 */
     private final GameElementMeta elementMeta;
-    /** 地图类型对象的构造器 */
-    private final Constructor<? extends GameMap> mapConstructor;
+    /** 地图类型对象的实例化方式 */
+    private final Supplier<? extends GameMap> mapFactory;
     /** 地图是否可游玩（被比赛使用） */
     private final boolean playable;
     /** 最大参赛队伍数量 */
@@ -27,27 +27,22 @@ public class MapEntry implements GameElement {
      * 构造一个游戏地图注册项
      *
      * @param elementMeta 此地图的元数据
-     * @param mapConstructor 此地图的<b>无参</b>构造器，{@code playable}为{@code true}时应返回{@link PlayableGameMap}；{@code playable}为{@code false}时应返回{@link GameMap}
+     * @param mapFactory 此地图的实例化方式（每次调用应返回全新的地图实例），{@code playable}为{@code true}时应返回{@link PlayableGameMap}；{@code playable}为{@code false}时应返回{@link GameMap}（此约定在{@link #newInstance()}时校验）
      * @param playable 地图是否可游玩
      *
-     * @throws RegistryException 如果{@code playable}的值和{@code mapConstructor}所构造的对象类型不匹配
+     * @throws RegistryException 如果{@code playable}为{@code true}但却未传入最大队伍数量
      * */
     public MapEntry(
             @NonNull GameElementMeta elementMeta,
-            @NonNull Constructor<? extends GameMap> mapConstructor,
+            @NonNull Supplier<? extends GameMap> mapFactory,
             boolean playable,
             @Nullable @Range(from = 1, to = Integer.MAX_VALUE) Integer maxTeams
     ) throws RegistryException {
-        if (playable) {
-            if (!PlayableGameMap.class.isAssignableFrom(mapConstructor.getDeclaringClass())) {
-                throw new RegistryException("地图 “" + elementMeta.id() + "” 被声明为可游玩的，构造器返回的对象类型也应是“可游玩地图”，实际却不是此类型", null);
-            }
-            if (maxTeams == null) {
-                throw new RegistryException("地图 “" + elementMeta.id() + "” 被声明为可游玩的，应传入最大队伍数量但却未传入", null);
-            }
+        if (playable && maxTeams == null) {
+            throw new RegistryException("地图 “" + elementMeta.id() + "” 被声明为可游玩的，应传入最大队伍数量但却未传入", null);
         }
         this.elementMeta = elementMeta;
-        this.mapConstructor = mapConstructor;
+        this.mapFactory = mapFactory;
         this.playable = playable;
         this.maxTeams = maxTeams;
     }
@@ -66,15 +61,21 @@ public class MapEntry implements GameElement {
      *
      * @return 此地图的新实例，{@link MapEntry#isPlayable()}为{@code true}时将返回{@link PlayableGameMap}，否则返回{@link GameMap}
      *
-     * @throws RegistryException 如果构造器抛出了异常
+     * @throws RegistryException 如果实例化过程抛出了异常
      * */
     public @NonNull GameMap newInstance() throws RegistryException {
+        GameMap instance;
         try {
-            return mapConstructor.newInstance();
+            instance = mapFactory.get();
         } catch (Exception e) {
             // 仅转义异常
             throw new RegistryException("实例化游戏地图失败：" + e.getLocalizedMessage(), null);
         }
+        // 实例化方式约定校验：此处产物类型真实可知（Supplier 无法静态检查）
+        if (playable && !(instance instanceof PlayableGameMap)) {
+            throw new RegistryException("地图 “" + elementMeta.id() + "” 被声明为可游玩的，实例化方式返回的对象类型也应是“可游玩地图”，实际却不是此类型", null);
+        }
+        return instance;
     }
 
     /**

@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -18,9 +19,9 @@ import java.util.*;
  * 使用单例模式，用{@link PlayerStateManager#getInstance()}获取实例
  * */
 public class PlayerStateManager implements Module {
-    private static PlayerStateManager instance;
+    private static @Nullable PlayerStateManager instance;
 
-    public static PlayerStateManager getInstance() {
+    public static @NonNull PlayerStateManager getInstance() {
         if (instance == null) throw new NullPointerException("玩家状态管理器实例不存在");
         return instance;
     }
@@ -30,7 +31,7 @@ public class PlayerStateManager implements Module {
     private PlayerStateManager() {}
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of(StateRegistrar.class, Registry.class);
     }
 
@@ -50,7 +51,7 @@ public class PlayerStateManager implements Module {
      * @param player 指定玩家
      * @param newState 新状态，自动识别状态所属体系
      * */
-    public void toggle(Player player, NamespacedKey newState) {
+    public void toggle(@NonNull Player player, @NonNull NamespacedKey newState) {
         // 定位新状态所属的状态体系
         StateSystemEntry system = Registry.getInstance()
                 .category(Categories.STATESYSTEM)
@@ -84,7 +85,7 @@ public class PlayerStateManager implements Module {
      *
      * @return 成功获取到状态时返回状态 ID，否则返回{@code null}
      * */
-    public NamespacedKey getState(Player player, String system) {
+    public @Nullable NamespacedKey getState(@NonNull Player player, @NonNull String system) {
         // 获取状态容器
         PersistentDataContainer statesContainer = checkStatesKey(player);
 
@@ -102,7 +103,7 @@ public class PlayerStateManager implements Module {
      * @param player 指定玩家
      * @param newState 新状态
      * */
-    private void changeStateInPDC(Player player, NamespacedKey newState) {
+    private void changeStateInPDC(@NonNull Player player, @NonNull NamespacedKey newState) {
         // 获取状态容器
         PersistentDataContainer statesPDC = checkStatesKey(player);
 
@@ -113,7 +114,7 @@ public class PlayerStateManager implements Module {
                 newState.getKey()
         );
         player.getPersistentDataContainer().set(
-                PlayerPDCKey.STATES.getValue(),
+                PlayerPDCKey.STATES.path(),
                 PersistentDataType.TAG_CONTAINER,
                 statesPDC
         );
@@ -126,9 +127,9 @@ public class PlayerStateManager implements Module {
      *
      * @return 状态容器（玩家PDC中的子容器）
      * */
-    private @NonNull PersistentDataContainer checkStatesKey(Player player) {
+    private @NonNull PersistentDataContainer checkStatesKey(@NonNull Player player) {
         PersistentDataContainer playerPDC = player.getPersistentDataContainer();
-        NamespacedKey statesKey = PlayerPDCKey.STATES.getValue();
+        NamespacedKey statesKey = PlayerPDCKey.STATES.path();
         // 尝试获取已有容器
         PersistentDataContainer statesContainer = playerPDC.get(statesKey, PersistentDataType.TAG_CONTAINER);
         if (statesContainer == null) {
@@ -146,7 +147,7 @@ public class PlayerStateManager implements Module {
      *
      * @return 键为体系名，值为对应状态
      */
-    public Map<String, String> getAllStates(Player player) {
+    public @NonNull Map<@NonNull String, @NonNull String> getAllStates(@NonNull Player player) {
         HashMap<String, String> result = new HashMap<>();
 
         PersistentDataContainer states = checkStatesKey(player);
@@ -166,7 +167,7 @@ public class PlayerStateManager implements Module {
      *
      * @return 如果指定玩家在指定状态中将返回{@code true}，否则返回{@code false}
      * */
-    public boolean onState(Player player, NamespacedKey state) {
+    public boolean onState(@NonNull Player player, @NonNull NamespacedKey state) {
         NamespacedKey currentState = getState(player, state.getNamespace());
         return currentState != null && currentState.equals(state);
     }

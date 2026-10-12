@@ -22,6 +22,7 @@ public class TranslateKeys {
         public static final String USR_PACKAGE_META_IO_EXCEPTION = "void_air_race.addons.usr_package.meta_io_exception";
         public static final String USR_PACKAGE_META_SIZE_ERROR = "void_air_race.addons.usr_package.meta_size_error";
         public static final String USR_PACKAGE_NOT_A_PACKAGE = "void_air_race.addons.usr_package.not_a_package";
+        public static final String USR_PACKAGE_NOT_LOADED = "void_air_race.addons.usr_package.not_loaded";
         public static final String USR_PACKAGE_PACKAGE_NOT_ENABLED = "void_air_race.addons.usr_package.package_not_enabled";
     }
 
@@ -100,6 +101,7 @@ public class TranslateKeys {
         public static final String LOBBY_DESCRIPTION_LINE1 = "void_air_race.map.lobby.description_line1";
         public static final String LOBBY_DISPLAY_VERSION = "void_air_race.map.lobby.display_version";
         public static final String LOBBY_NAME = "void_air_race.map.lobby.name";
+        public static final String LUA_MAP_START_FAILED = "void_air_race.map.lua_map.start_failed";
         public static final String MAP_COMPONENT_SELECTED_START_FAILED = "void_air_race.map.map_component.selected_start_failed";
         public static final String MAP_COMPONENT_SELECTED_START_FAILED_UNKNOWN_CAUSE = "void_air_race.map.map_component.selected_start_failed_unknown_cause";
         public static final String SMALL_TOWN_AUTHOR1 = "void_air_race.map.small_town.author1";

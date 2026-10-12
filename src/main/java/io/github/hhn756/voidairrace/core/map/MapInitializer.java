@@ -11,6 +11,7 @@ import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.Schedulin
 import io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder.BlockFinder;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -19,23 +20,23 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class MapInitializer implements Module {
-    private static MapInitializer instance;
+    private static @Nullable MapInitializer instance;
 
-    public static MapInitializer getInstance() throws NullPointerException {
+    public static @NonNull MapInitializer getInstance() throws NullPointerException {
         if (instance == null) throw new NullPointerException("地图初始化器实例不存在");
         return instance;
     }
 
     // ------
 
-    private VoidAirRace mainClass;
-    private YamlConfig flagConfig;
-    private Logger logger;
+    private @NonNull VoidAirRace mainClass;
+    private @NonNull YamlConfig flagConfig;
+    private @NonNull Logger logger;
 
     private MapInitializer() {}
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         // BlockFinder 虽无直接引用，但地图初始化流程（initAllMapsAsync 触发的各地图 initAsync）会用到
         return List.of(Config.class, Registry.class, SchedulingUtil.class, BlockFinder.class);
     }
@@ -93,7 +94,7 @@ public class MapInitializer implements Module {
      *
      * @throws IllegalArgumentException 当指定地图不存在时抛出
      */
-    public CompletableFuture<Void> reinitMap(NamespacedKey mapId) throws IllegalArgumentException {
+    public @NonNull CompletableFuture<Void> reinitMap(@NonNull NamespacedKey mapId) throws IllegalArgumentException {
         GameMap mapInst = Registry.getInstance().category(Categories.MAP).get(mapId).newInstance();
 
         // 如果地图之前已初始化，先执行同步清理
@@ -115,7 +116,7 @@ public class MapInitializer implements Module {
      *
      * @return 表示初始化完成的 future
      */
-    private CompletableFuture<Void> initOneMap(@NonNull NamespacedKey mapId) {
+    private @NonNull CompletableFuture<Void> initOneMap(@NonNull NamespacedKey mapId) {
         GameMap mapInst = Registry.getInstance().category(Categories.MAP).get(mapId).newInstance();
         try {
             return mapInst.initAsync(mainClass)
@@ -143,7 +144,7 @@ public class MapInitializer implements Module {
      *
      * @return `true`表示已初始化，`false`表示未初始化
      */
-    public boolean isInited(NamespacedKey mapId) {
+    public boolean isInited(@NonNull NamespacedKey mapId) {
         return flagConfig.getBoolean(mapIdToFlagPath(mapId), false);
     }
 
@@ -151,7 +152,7 @@ public class MapInitializer implements Module {
      * 修改地图初始化状态
      * 注：这只会修改标记而不会进行初始化操作
      */
-    public void setInitFlag(NamespacedKey mapId, boolean initFlag) {
+    public void setInitFlag(@NonNull NamespacedKey mapId, boolean initFlag) {
         flagConfig.set(mapIdToFlagPath(mapId), initFlag);
     }
 
@@ -160,7 +161,7 @@ public class MapInitializer implements Module {
      *
      * @return 用于标识指定地图初始化状态的配置键的路径
      * */
-    private String mapIdToFlagPath(NamespacedKey mapId) {
+    private @NonNull String mapIdToFlagPath(@NonNull NamespacedKey mapId) {
         return "mapInitState." + mapId;
     }
 }

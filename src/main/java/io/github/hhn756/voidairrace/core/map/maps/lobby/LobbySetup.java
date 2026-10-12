@@ -6,9 +6,12 @@ import io.github.hhn756.voidairrace.core.map.MapInitializer;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.modules.ListenerProvider;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import org.bukkit.NamespacedKey;
+import org.bukkit.event.Listener;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,11 +19,16 @@ import java.util.List;
 /**
  * 大堂初始化：根据当前选中的游戏地图，设置大堂中可用的队伍选择区域数量
  * */
-public class LobbySetup implements Module {
+public class LobbySetup implements Module, ListenerProvider {
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         // MAP 注册项类别由 MapInitializer 创建，必须晚于它加载
         return List.of(Config.class, Registry.class, MapInitializer.class);
+    }
+
+    @Override
+    public @NonNull Collection<@NonNull Listener> getListeners() {
+        return List.of(new EventListener());
     }
 
     /**
@@ -38,9 +46,5 @@ public class LobbySetup implements Module {
         } else {
             State.activeTeamArea = 0;
         }
-    }
-
-    /** 插件禁用时执行 */
-    private void onUnload() {
     }
 }

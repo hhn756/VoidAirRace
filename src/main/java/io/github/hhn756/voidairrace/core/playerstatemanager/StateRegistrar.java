@@ -10,6 +10,8 @@ import io.github.hhn756.voidairrace.result.OperationResult;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.Listener;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,9 +21,9 @@ import java.util.List;
  * 负责创建{@link io.github.hhn756.voidairrace.constants.Categories#STATESYSTEM}注册项类别、扫描并注册插件中所有玩家状态
  * */
 public class StateRegistrar implements Module {
-    private static StateRegistrar instance;
+    private static @Nullable StateRegistrar instance;
 
-    public static StateRegistrar getInstance() {
+    public static @NonNull StateRegistrar getInstance() {
         if (instance == null) throw new NullPointerException("玩家状态注册表实例不存在");
         return instance;
     }
@@ -31,7 +33,7 @@ public class StateRegistrar implements Module {
     StateRegistrar() {}
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of(Registry.class);
     }
 
@@ -62,7 +64,7 @@ public class StateRegistrar implements Module {
         registerStates(states, stateSystems, mainClass);
     }
 
-    private List<PlayerState> instantiateStates() {
+    private @NonNull List<@NonNull PlayerState> instantiateStates() {
         List<PlayerState> states = new ArrayList<>();
         for (Class<PlayerState> stateClass : ClassScanner.scanSubclasses(
                 PlayerState.class,
@@ -78,8 +80,8 @@ public class StateRegistrar implements Module {
     }
 
     private void registerDefaultSystems(
-            List<PlayerState> states,
-            DefaultSubtable<StateSystemEntry, String> stateSystems) {
+            @NonNull List<@NonNull PlayerState> states,
+            @NonNull DefaultSubtable<@NonNull StateSystemEntry, @NonNull String> stateSystems) {
         for (PlayerState state : states) {
             if (!(state instanceof DefaultState)) continue;
 
@@ -96,9 +98,9 @@ public class StateRegistrar implements Module {
     }
 
     private void registerStates(
-            List<PlayerState> states,
-            DefaultSubtable<StateSystemEntry, String> stateSystems,
-            VoidAirRace mainClass) {
+            @NonNull List<@NonNull PlayerState> states,
+            @NonNull DefaultSubtable<@NonNull StateSystemEntry, @NonNull String> stateSystems,
+            @NonNull VoidAirRace mainClass) {
         for (PlayerState state : states) {
             NamespacedKey stateId = state.getId();
             StateSystemEntry system = stateSystems.get(stateId.getNamespace());

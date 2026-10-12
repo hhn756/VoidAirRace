@@ -20,6 +20,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,17 +39,17 @@ import java.util.regex.Pattern;
  * 归还/卸载世界时删除；加载前目录不应存在，存在即异常残留或同名的无关目录，拒绝加载
  */
 public class ArenaManager implements Module {
-    private static ArenaManager instance;
+    private static @Nullable ArenaManager instance;
 
     /**
      * 竞技场世界目录名的合法形态（由{@link #arenaIdToWorldName(Integer)}生成），<br>
      * 删除目录前校验，杜绝误删其他目录
      * */
-    private static final Pattern ARENA_WORLD_DIR_NAME = Pattern.compile(
+    private static final @NonNull Pattern ARENA_WORLD_DIR_NAME = Pattern.compile(
             Pattern.quote(Plugin.ns) + "\\.arena\\.\\d+");
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of(Config.class);
     }
 
@@ -81,7 +82,7 @@ public class ArenaManager implements Module {
         instance = null;
     }
 
-    public static ArenaManager getInstance() throws NullPointerException {
+    public static @NonNull ArenaManager getInstance() throws NullPointerException {
         if (instance == null) throw new NullPointerException("竞技场管理器实例不存在");
         return instance;
     }
@@ -91,12 +92,12 @@ public class ArenaManager implements Module {
     /**
      * 最大竞技场数量
      * */
-    private Integer maxArenas;
+    private @NonNull Integer maxArenas;
 
     /**
      * 提示语列表
      * */
-    private static final String[] tips = {
+    private static final @NonNull String[] tips = {
             "Don't put your files here!",
             "别把你的文件放在这里！",
             "別把你的文件放在這裡！",
@@ -104,17 +105,17 @@ public class ArenaManager implements Module {
             "Не клади свои документы сюда!"
     };
 
-    private final HashMap<Integer, ArenaState> arenaStates = new HashMap<>();
+    private final @NonNull HashMap<@NonNull Integer, @NonNull ArenaState> arenaStates = new HashMap<>();
 
     /**
      * 借据 uid，递增
      * */
-    private Integer nextTokenUid = 1;
+    private @NonNull Integer nextTokenUid = 1;
 
     /**
      * 未借出的竞技场数量
      * */
-    private Integer freeCount;
+    private @NonNull Integer freeCount;
 
     private ArenaManager() {}
 
@@ -176,7 +177,7 @@ public class ArenaManager implements Module {
      * @param token 此借据对应的竞技场世界将要承载竞技场数据
      * @param arenaPath 要加载的竞技场世界数据路径（{@code resource/<arenaPath>/}）
      * */
-    public @NonNull OperationResult loadArena(ArenaToken token, String arenaPath) {
+    public @NonNull OperationResult loadArena(@NonNull ArenaToken token, @NonNull String arenaPath) {
         if (!validateToken(token)) return OperationResult.failure(
                 TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
                 tokenInvalidTechDetail(token)
@@ -201,7 +202,7 @@ public class ArenaManager implements Module {
      *
      * @param token 加载 此借据对应的竞技场世界
      * */
-    public @NonNull OperationResult loadArenaWorld(ArenaToken token) {
+    public @NonNull OperationResult loadArenaWorld(@NonNull ArenaToken token) {
         if (!validateToken(token)) return OperationResult.failure(
                 TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
                 tokenInvalidTechDetail(token)
@@ -219,7 +220,7 @@ public class ArenaManager implements Module {
     /**
      * 卸载竞技场世界（不保存内存中的修改）
      * */
-    public @NonNull OperationResult unloadArenaWorld(ArenaToken token) {
+    public @NonNull OperationResult unloadArenaWorld(@NonNull ArenaToken token) {
         if (!validateToken(token)) return OperationResult.failure(
                 TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
                 tokenInvalidTechDetail(token)
@@ -250,14 +251,14 @@ public class ArenaManager implements Module {
     /**
      * 获取最大竞技场数量
      * */
-    public Integer getMaxArenas() {
+    public @NonNull Integer getMaxArenas() {
         return maxArenas;
     }
 
     /**
      * 获取还未被借出的竞技场数量
      * */
-    public Integer getFreeCount() {
+    public @NonNull Integer getFreeCount() {
         return freeCount;
     }
 
@@ -275,7 +276,7 @@ public class ArenaManager implements Module {
      * @throws IOException 复制竞技场数据时出现 IO 错误则抛出
      * @throws ArenaException 竞技场世界目录已存在（拒绝覆盖）时抛出
      * */
-    private void loadArena(Integer arenaWorldId, String arenaPath) throws IOException {
+    private void loadArena(@NonNull Integer arenaWorldId, @NonNull String arenaPath) throws IOException {
         // 如果该竞技场世界已加载，先卸载（不保存修改，竞技场世界目录随卸载一并删除）
         if (arenaState(arenaWorldId).getLoadedWorld() != null) {
             unloadArenaWorld(arenaWorldId);
@@ -307,7 +308,7 @@ public class ArenaManager implements Module {
      *
      * @throws ArenaException 当竞技场世界目录不存在或世界加载失败时抛出
      */
-    private World loadArenaWorld(Integer arenaId) throws ArenaException {
+    private @NonNull World loadArenaWorld(@NonNull Integer arenaId) throws ArenaException {
         // 已加载直接返回，否则加载新世界
         World loadedWorld = arenaState(arenaId).getLoadedWorld();
         if (loadedWorld != null) return loadedWorld;
@@ -340,7 +341,7 @@ public class ArenaManager implements Module {
      *
      * @param arenaId 竞技场 ID
      */
-    private void unloadArenaWorld(Integer arenaId) {
+    private void unloadArenaWorld(@NonNull Integer arenaId) {
         World world = arenaState(arenaId).getLoadedWorld();
         if (world == null) return;
 
@@ -368,14 +369,14 @@ public class ArenaManager implements Module {
     /**
      * @return 储存竞技场状态的对象
      * */
-    private @NonNull ArenaState arenaState(Integer arenaId) {
+    private @NonNull ArenaState arenaState(@NonNull Integer arenaId) {
         return arenaStates.get(arenaId);
     }
 
     /**
      * @return 空闲竞技场的 ID，如果没有空闲的竞技场则返回 {@code -1}
      */
-    private Integer getFreeArena() {
+    private @NonNull Integer getFreeArena() {
         for (Integer id = 1; id <= maxArenas; id++) {
             if (!arenaState(id).isBorrowed()) {
                 return id;
@@ -387,14 +388,14 @@ public class ArenaManager implements Module {
     /**
      *根据竞技场 ID 生成世界文件夹名称
      * */
-    private String arenaIdToWorldName(Integer arenaId) {
+    private @NonNull String arenaIdToWorldName(@NonNull Integer arenaId) {
         return Plugin.ns + ".arena." + arenaId;
     }
 
     /**
      * 在世界目录中添加提示文件（目录须已存在，由竞技场数据复制时创建）
      * */
-    private void addTips(String targetDir) {
+    private void addTips(@NonNull String targetDir) {
         VoidAirRace mainClass = VoidAirRace.getInstance();
         File targetDirFile = new File(targetDir);
         for (String tipText : tips) {
@@ -402,7 +403,8 @@ public class ArenaManager implements Module {
             try {
                 tipFile.createNewFile();
             } catch (IOException e) {
-                mainClass.getLogger().warning("创建提示语文件 '" + tipText + "' 失败");
+                mainClass.getLogger().warning(
+                        "在竞技场世界目录 " + targetDir + " 中创建提示文件 '" + tipText + "' 失败：" + e.getMessage());
             }
         }
     }
@@ -440,7 +442,7 @@ public class ArenaManager implements Module {
      *
      * @return {@code true} 表示有效，{@code false} 表示无效
      * */
-    private Boolean validateToken(@NonNull ArenaToken token) {
+    private @NonNull Boolean validateToken(@NonNull ArenaToken token) {
         Integer activeTokenUid = arenaState(token.getArenaId()).getActiveTokenUid();
         return token.getUid().equals(activeTokenUid);
     }

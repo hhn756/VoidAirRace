@@ -1,7 +1,7 @@
 package io.github.hhn756.voidairrace.core.matchrule;
 
-import io.github.hhn756.voidairrace.core.addons.GameElement;
-import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
+import io.github.hhn756.voidairrace.addons.GameElement;
+import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
 

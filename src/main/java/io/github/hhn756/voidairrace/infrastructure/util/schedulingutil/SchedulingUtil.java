@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,11 +17,11 @@ import java.util.List;
 public class SchedulingUtil implements Module {
     private SchedulingUtil() {}
 
-    private static JavaPlugin mainClass;
-    private static BukkitScheduler bukkitScheduler;
+    private static @NonNull JavaPlugin mainClass;
+    private static @NonNull BukkitScheduler bukkitScheduler;
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of();
     }
 
@@ -28,10 +29,6 @@ public class SchedulingUtil implements Module {
     private void onLoad() {
         mainClass = VoidAirRace.getInstance();
         bukkitScheduler = Bukkit.getScheduler();
-    }
-
-    /** 插件禁用时执行 */
-    private void onUnload() {
     }
 
     /**
@@ -43,7 +40,7 @@ public class SchedulingUtil implements Module {
      *
      * @see BukkitTask
      * */
-    public static BukkitTask runOnMainThread(Runnable runnable) {
+    public static @NonNull BukkitTask runOnMainThread(@NonNull Runnable runnable) {
         return bukkitScheduler.runTask(mainClass, runnable);
     }
 
@@ -56,7 +53,7 @@ public class SchedulingUtil implements Module {
      *
      * @see BukkitTask
      * */
-    public static BukkitTask runTaskAsync(Runnable runnable) {
+    public static @NonNull BukkitTask runTaskAsync(@NonNull Runnable runnable) {
         return bukkitScheduler.runTaskAsynchronously(mainClass, runnable);
     }
 }

@@ -3,7 +3,6 @@ package io.github.hhn756.voidairrace;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GlobalSettingKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
-import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.ListenerRegistrar;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.modules.Modules;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
@@ -21,13 +20,13 @@ public class VoidAirRace extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // 加载所有模块
+        // 加载所有模块（模块声明的 Bukkit 事件监听器随模块加载注册）
         Modules.loadAll(ClassScanner.scanSubclasses(Module.class));
 
         // 文字画 “VAR”（纯装饰，可经 global_settings.hide_ascii_logo 关闭）
         if (!Config.getInstance()
                 .getYmlConfig(PublicFiles.GLOBAL_SETTINGS)
-                .get(GlobalSettingKeys.HIDE_ASCII_LOGO)
+                .get(GlobalSettingKeys.HIDE_ASCII_LOGO, false)
         ) {
             Logger logger = getLogger();
             logger.info(" __     ___    ____  ");
@@ -36,9 +35,6 @@ public class VoidAirRace extends JavaPlugin {
             logger.info("   \\ V / ___ \\|  _ < ");
             logger.info("    \\_/_/   \\_\\_| \\_\\");
         }
-
-        // 注册所有 Bukkit 事件监听器
-        ListenerRegistrar.RegisterAll(this);
     }
 
     @Override

@@ -3,9 +3,12 @@ package io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder;
 import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -20,22 +23,18 @@ public class BlockFinder implements Module {
     /**
      * 插件实例，插件启用时由本模块的 {@code onLoad} 设置
      */
-    public static Plugin plugin;
+    public static @NonNull Plugin plugin;
 
     private BlockFinder() {}
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of();
     }
 
     /** 插件启用时执行 */
     private void onLoad() {
         plugin = VoidAirRace.getInstance();
-    }
-
-    /** 插件禁用时执行 */
-    private void onUnload() {
     }
 
     /**
@@ -64,12 +63,12 @@ public class BlockFinder implements Module {
      * @param plugin       插件实例
      * @return CompletableFuture，返回符合条件的所有Location坐标列表
      */
-    public static CompletableFuture<List<Location>> findBlocksAsync(
-            World world,
+    public static @NonNull CompletableFuture<@NonNull List<@NonNull Location>> findBlocksAsync(
+            @Nullable World world,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
-            Predicate<BlockData> condition,
-            Plugin plugin) {
+            @Nullable Predicate<@NonNull BlockData> condition,
+            @Nullable Plugin plugin) {
 
         if (world == null || condition == null) {
             return CompletableFuture.completedFuture(new ArrayList<>());
@@ -139,11 +138,11 @@ public class BlockFinder implements Module {
      *
      * @see BlockFinder#findBlocksAsync(World, int, int, int, int, int, int, Predicate, Plugin)
      */
-    public static CompletableFuture<List<Location>> findBlocksByMaterialAsync(
-            World world,
+    public static @NonNull CompletableFuture<@NonNull List<@NonNull Location>> findBlocksByMaterialAsync(
+            @Nullable World world,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
-            org.bukkit.Material materialType) {
+            @Nullable Material materialType) {
         return findBlocksAsync(
                 world,
                 minX, minY, minZ,

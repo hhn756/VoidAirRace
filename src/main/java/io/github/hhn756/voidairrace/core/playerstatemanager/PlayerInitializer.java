@@ -3,19 +3,23 @@ package io.github.hhn756.voidairrace.core.playerstatemanager;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.PlayerPDCKey;
 import io.github.hhn756.voidairrace.event.PlayerInitEvent;
+import io.github.hhn756.voidairrace.infrastructure.modules.ListenerProvider;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.persistence.PersistentDataType;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
 
-public class PlayerInitializer implements Module {
-    private static PlayerInitializer instance;
+public class PlayerInitializer implements Module, ListenerProvider {
+    private static @Nullable PlayerInitializer instance;
 
-    public static PlayerInitializer getInstance() {
+    public static @NonNull PlayerInitializer getInstance() {
         if (instance == null) throw new NullPointerException("玩家初始化器实例不存在");
         return instance;
     }
@@ -25,8 +29,13 @@ public class PlayerInitializer implements Module {
     private PlayerInitializer() {}
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of(StateRegistrar.class, PlayerStateManager.class);
+    }
+
+    @Override
+    public @NonNull Collection<@NonNull Listener> getListeners() {
+        return List.of(new EventListener());
     }
 
     /**
@@ -52,7 +61,7 @@ public class PlayerInitializer implements Module {
      *
      * @param player 指定玩家
      */
-    public void initializePlayer(Player player) {
+    public void initializePlayer(@NonNull Player player) {
         // 检查玩家初始化状态
         if (isInitialized(player)) return;
 
@@ -72,22 +81,22 @@ public class PlayerInitializer implements Module {
     /**
      * 重新初始化指定玩家
      * */
-    public void reInitPlayer(Player player) {
+    public void reInitPlayer(@NonNull Player player) {
         setInitState(player, false);
         initializePlayer(player);
     }
 
-    public boolean isInitialized(Player player) {
+    public boolean isInitialized(@NonNull Player player) {
         Boolean initState = player.getPersistentDataContainer().get(
-                PlayerPDCKey.INITIALIZED.getValue(),
+                PlayerPDCKey.INITIALIZED.path(),
                 PersistentDataType.BOOLEAN
         );
         return initState != null && initState;
     }
 
-    private void setInitState(Player player, Boolean newValue) {
+    private void setInitState(@NonNull Player player, @NonNull Boolean newValue) {
         player.getPersistentDataContainer().set(
-                PlayerPDCKey.INITIALIZED.getValue(),
+                PlayerPDCKey.INITIALIZED.path(),
                 PersistentDataType.BOOLEAN,
                 newValue
         );

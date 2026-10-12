@@ -1,9 +1,9 @@
 package io.github.hhn756.voidairrace.core.matchrule;
 
+import io.github.hhn756.voidairrace.addons.GameElement;
+import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
-import io.github.hhn756.voidairrace.core.addons.GameElement;
-import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import net.kyori.adventure.text.Component;

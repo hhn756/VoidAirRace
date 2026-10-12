@@ -1,7 +1,7 @@
 package io.github.hhn756.voidairrace.core.map.maps.lobby;
 
+import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
-import io.github.hhn756.voidairrace.core.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.core.map.GameMap;
 import net.kyori.adventure.text.Component;
 import org.bukkit.event.Listener;

@@ -5,6 +5,7 @@ import io.github.hhn756.voidairrace.exception.ConfigException;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,10 +21,10 @@ import java.util.logging.Logger;
  * 采用单例模式，通过 {@link #getInstance()} 获取实例
  */
 public class Config implements Module {
-    private static Config instance;
+    private static @Nullable Config instance;
 
     @Override
-    public Collection<Class<? extends Module>> getRequiredModules() {
+    public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of();
     }
 
@@ -185,7 +186,7 @@ public class Config implements Module {
      * @param configDefinition 要加载的文件的定义对象
      * @param dataSource       从指定文件读取配置数据
      * */
-    private @NonNull YamlConfig loadYmlConfig(@NonNull ConfigDefinition<?> configDefinition, File dataSource)
+    private @NonNull YamlConfig loadYmlConfig(@NonNull ConfigDefinition<?> configDefinition, @NonNull File dataSource)
             throws ConfigException {
         YamlConfig ymlConfig = new YamlConfig(configDefinition, dataSource);
         try {

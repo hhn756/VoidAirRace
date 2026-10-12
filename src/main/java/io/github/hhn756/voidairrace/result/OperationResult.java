@@ -34,8 +34,9 @@ import org.jspecify.annotations.Nullable;
  * </ul>
  *
  * @see ValueResult 需要携带一个值时使用
+ * @see ItemResult 批量操作的逐项结果（携带定位载荷的条目类型）
  * */
-public sealed interface OperationResult permits OperationResult.Ok, OperationResult.Failed {
+public sealed interface OperationResult permits OperationResult.Ok, OperationResult.Failed, ItemResult {
 
     /**
      * 操作成功，不携带任何信息
@@ -56,7 +57,6 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
      *
      * @param reasonKey  本层失败原因的翻译键（{@link Component#translatable(String)}的键）。
      *                   允许为{@code null}：表示“无可上报原因的失败”，兜底文案由最外层调用方负责
-     *                   （旧版允许此类结果，保留兼容）
      * @param userDetail 内层已转换好的用户文案，转换时作为{@code reasonKey}的参数；可为{@code null}。
      *                   禁止包含服务端参数
      * @param techDetail 本层技术性描述（如出错的路径、参数值），仅供日志；可为{@code null}。
@@ -95,7 +95,7 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
     /**
      * 创建一个表示成功的结果
      */
-    static OperationResult success() {
+    static @NonNull OperationResult success() {
         return new Ok();
     }
 
@@ -104,7 +104,7 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
      *
      * @param reasonKey 本层失败原因的翻译键，可为{@code null}（无可上报原因的失败）
      * */
-    static OperationResult failure(@Nullable String reasonKey) {
+    static @NonNull OperationResult failure(@Nullable String reasonKey) {
         return new Failed(reasonKey, null, null, null);
     }
 
@@ -114,7 +114,7 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
      * @param reasonKey  本层失败原因的翻译键（用户消息），可为{@code null}
      * @param techDetail 本层技术性描述，可含服务端参数，仅日志；可为{@code null}
      * */
-    static OperationResult failure(@Nullable String reasonKey, @Nullable String techDetail) {
+    static @NonNull OperationResult failure(@Nullable String reasonKey, @Nullable String techDetail) {
         return new Failed(reasonKey, null, techDetail, null);
     }
 
@@ -127,7 +127,7 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
      * @param techDetail 本层技术性描述，可为{@code null}。可包含服务端参数，禁止显示给玩家
      * @param cause      内层异常，可为{@code null}
      * */
-    static OperationResult failure(
+    static @NonNull OperationResult failure(
             @Nullable String reasonKey,
             @Nullable Component userDetail,
             @Nullable String techDetail,
@@ -173,7 +173,7 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
      *
      * @param reasonKey 本层失败原因的翻译键
      * */
-    default OperationResult causedBy(@Nullable String reasonKey) {
+    default @NonNull OperationResult causedBy(@Nullable String reasonKey) {
         if (this instanceof Failed f) {
             return new Failed(reasonKey, f.message(), f.techDetail(), f.cause());
         }
@@ -188,7 +188,7 @@ public sealed interface OperationResult permits OperationResult.Ok, OperationRes
      * @param knownReasonKey   内层有用户消息（原因已知）时使用的本层翻译键
      * @param unknownReasonKey 内层没有用户消息（原因未知）时使用的本层翻译键
      * */
-    default OperationResult causedBy(@NonNull String knownReasonKey, @Nullable String unknownReasonKey) {
+    default @NonNull OperationResult causedBy(@NonNull String knownReasonKey, @Nullable String unknownReasonKey) {
         if (this instanceof Failed f) {
             Component inner = f.message();
             return inner == null

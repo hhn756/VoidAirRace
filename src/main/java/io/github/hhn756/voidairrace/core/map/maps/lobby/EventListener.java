@@ -11,7 +11,6 @@ import io.github.hhn756.voidairrace.event.ConfigFieldChangeEvent;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
 import io.github.hhn756.voidairrace.event.MatchStartedEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.listenerregistrar.AutoRegistration;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -29,7 +28,6 @@ import org.bukkit.util.BoundingBox;
 
 import java.util.Map;
 
-@AutoRegistration
 public class EventListener implements Listener {
 
     @EventHandler

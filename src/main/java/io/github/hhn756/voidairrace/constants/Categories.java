@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.constants;
 
-import io.github.hhn756.voidairrace.core.addons.TagEntry;
+import io.github.hhn756.voidairrace.addons.TagEntry;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.match.CompEntry;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
