@@ -31,7 +31,7 @@ public class ConfigFieldChangeEvent extends Event {
     }
 
     /** 发生变更的配置文件的路径或名称，不含扩展名 */
-    private final @NonNull ConfigDefinition<?> file;
+    private final @NonNull ConfigDefinition file;
 
     /**
      * 发生变更的路径<br>
@@ -59,7 +59,7 @@ public class ConfigFieldChangeEvent extends Event {
      * @param newValue 新值
      */
     public ConfigFieldChangeEvent(
-            @NonNull ConfigDefinition<?> file,
+            @NonNull ConfigDefinition file,
             @NonNull  String       path,
             @Nullable Object       oldValue,
             @Nullable Object       newValue
@@ -75,7 +75,7 @@ public class ConfigFieldChangeEvent extends Event {
      *
      * @return 代表配置文件的对象
      */
-    public @NonNull ConfigDefinition<?> getFile() {
+    public @NonNull ConfigDefinition getFile() {
         return file;
     }
 

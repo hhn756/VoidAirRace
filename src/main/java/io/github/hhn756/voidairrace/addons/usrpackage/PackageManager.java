@@ -13,8 +13,8 @@ import io.github.hhn756.voidairrace.core.matchrule.RuleRegistrar;
 import io.github.hhn756.voidairrace.event.UsrPackageLoadEvent;
 import io.github.hhn756.voidairrace.exception.UsrPackageException;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
@@ -361,8 +361,8 @@ public class PackageManager implements Module {
     private @NonNull ValueResult<UsrPackage> loadParsed(@NonNull UsrPackage newPackage) {
         // 启用白名单：未列入 game_settings 的 enable_packages 的包不加载（在执行入口脚本之前拒绝）
         List<String> enabledPackages = Config.getInstance()
-                .getYmlConfig(PublicFiles.GAME_SETTINGS)
-                .get(GameSettingKeys.ENABLE_PACKAGES, List.of());
+                .getYmlConfig(PublicFile.GAME_SETTING)
+                .get(GameSettingKey.ENABLE_PACKAGES, List.of());
         if (!enabledPackages.contains(newPackage.id())) return ValueResult.failure(
                 TranslateKeys.Addons.USR_PACKAGE_PACKAGE_NOT_ENABLED,
                 Component.text(newPackage.id()),
@@ -382,11 +382,11 @@ public class PackageManager implements Module {
         );
 
         // API 版本约束：包声明的支持区间必须覆盖插件当前 API 版本
-        if (!newPackage.supportsApiVersion(Plugin.API_VERSION)) return ValueResult.failure(
+        if (!newPackage.supportsApiVersion(Plugin.LUA_API_VERSION)) return ValueResult.failure(
                 TranslateKeys.Addons.USR_PACKAGE_API_VERSION_UNSUPPORTED,
                 Component.text(newPackage.id()),
                 "无法加载用户包，插件 API 版本不受支持：" + newPackage.id()
-                        + "（要求 " + newPackage.api() + "，插件当前为 " + Plugin.API_VERSION + "）",
+                        + "（要求 " + newPackage.api() + "，插件当前为 " + Plugin.LUA_API_VERSION + "）",
                 null
         );
 

@@ -5,9 +5,11 @@ import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.addons.usrpackage.script.api.LogOutputStream;
 import io.github.hhn756.voidairrace.addons.usrpackage.script.api.PluginApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.script.api.ScriptCallGate;
+import io.github.hhn756.voidairrace.addons.usrpackage.script.api.handle.HandleApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.script.api.module.PackageRequire;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.exception.UsrPackageException;
+import io.github.hhn756.voidairrace.infrastructure.modules.ListenerProvider;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import net.kyori.adventure.text.Component;
@@ -22,6 +24,7 @@ import net.sandius.rembulan.impl.StateContexts;
 import net.sandius.rembulan.lib.*;
 import net.sandius.rembulan.load.LoaderException;
 import net.sandius.rembulan.runtime.LuaFunction;
+import org.bukkit.event.Listener;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -52,7 +55,7 @@ import java.util.logging.Logger;
  * <p>
  * 本类非线程安全：所有 Lua 相关操作只在服务器主线程发生（由{@link ScriptCallGate}断言）
  * */
-public class PackageScriptService implements Module {
+public class PackageScriptService implements Module, ListenerProvider {
     /** 包 Id → 包环境表（全局表）。仅登记加载成功的包 */
     private final @NonNull Map<@NonNull String, @NonNull Table> envs = new HashMap<>();
 
@@ -69,6 +72,12 @@ public class PackageScriptService implements Module {
     @Override
     public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         return List.of();
+    }
+
+    @Override
+    public @NonNull Collection<@NonNull Listener> getListeners() {
+        // 比赛句柄生命周期归脚本运行时：比赛结束监听器随本模块加载注册、卸载反注册
+        return List.of(new HandleApi.MatchOverListener());
     }
 
     /** 插件禁用时执行 */

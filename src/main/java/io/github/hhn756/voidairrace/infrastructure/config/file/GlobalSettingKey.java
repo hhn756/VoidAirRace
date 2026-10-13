@@ -1,4 +1,4 @@
-package io.github.hhn756.voidairrace.infrastructure.config.files;
+package io.github.hhn756.voidairrace.infrastructure.config.file;
 
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigKey;
 import org.bukkit.Location;
@@ -6,7 +6,7 @@ import org.bukkit.Location;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class GlobalSettingKeys {
+public class GlobalSettingKey {
     /**
      * 世界/大厅重生点位置<br>
      * 默认值采用 Location 的预序列化 Map 形式（含世界名字符串）：既不要求定义时存在世界实例，

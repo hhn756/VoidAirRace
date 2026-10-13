@@ -9,8 +9,7 @@ import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigDefinition;
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigKey;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
-import io.github.hhn756.voidairrace.infrastructure.util.TypeReference;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import net.kyori.adventure.text.Component;
@@ -45,16 +44,12 @@ public class Match {
     private final @NonNull MatchConfig config;
 
     /** 比赛记录文件定义 */
-    private static final @NonNull ConfigDefinition<YamlConfig> recordFile = new ConfigDefinition<>(
-            PublicFiles.TEMP_DIR + "match_record",
-            new ConfigKey<?>[0],
-            new TypeReference<>(){}
+    private static final @NonNull ConfigDefinition recordFile = ConfigDefinition.of(
+            PublicFile.TEMP_DIR + "match_record",
+            new ConfigKey<?>[0]
     );
     /** 比赛记录文件实例 */
     private YamlConfig recordInst;
-
-    /** 比赛句柄上下文（懒创建，与本比赛实例一一对应）；比赛结束后分离 */
-    private @Nullable HandleContext handleContext;
 
     /**
      * 构造一场新的比赛（不会自动开始）
@@ -341,9 +336,6 @@ public class Match {
 
         new MatchOverEvent(this, endContext).callEvent();
 
-        // 分离句柄上下文：断开脚本侧句柄对本比赛对象图的引用链（防 GC 驻留）
-        if (handleContext != null) handleContext.detach();
-
         return OperationResult.success();
     }
 
@@ -436,50 +428,6 @@ public class Match {
      * */
     public @NonNull MatchState state() {
         return state;
-    }
-
-    /**
-     * 获取此比赛的句柄上下文（懒创建）<br>
-     * 供脚本 API 层构建 Lua 句柄表；同一场比赛的所有句柄共享同一上下文
-     *
-     * @return 此比赛的句柄上下文
-     * */
-    public @NonNull HandleContext handleContext() {
-        HandleContext ctx = handleContext;
-        if (ctx == null) {
-            ctx = new HandleContext(this);
-            handleContext = ctx;
-        }
-        return ctx;
-    }
-
-    /**
-     * 比赛句柄的共享上下文<br>
-     * 所有句柄函数捕获本实例而非比赛本身：比赛结束后{@link #detach()}置空内部引用，
-     * 一次操作即断开脚本侧全部句柄函数对本比赛对象图的强引用（防 GC 驻留），
-     * 同时作为句柄函数「比赛是否仍可用」的唯一判定点
-     * */
-    public static final class HandleContext {
-        /** 所属比赛；分离后为{@code null} */
-        private @Nullable Match match;
-
-        HandleContext(@NonNull Match match) {
-            this.match = match;
-        }
-
-        /**
-         * 获取句柄所属的比赛
-         *
-         * @return 所属比赛实例；比赛已结束（已分离）时为{@code null}
-         * */
-        public @Nullable Match get() {
-            return match;
-        }
-
-        /** 分离句柄上下文：置空内部比赛引用，之后的{@link #get()}恒返回{@code null} */
-        void detach() {
-            match = null;
-        }
     }
 
     /**

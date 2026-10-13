@@ -49,7 +49,7 @@ public final class PluginApi {
             @NonNull Function<@NonNull String, @Nullable UsrPackage> packageResolver
     ) {
         Table api = stateContext.newTable();
-        api.rawset(ByteString.of("api_version"), (long) Plugin.API_VERSION);
+        api.rawset(ByteString.of("api_version"), (long) Plugin.LUA_API_VERSION);
         RegisterApi.installInto(stateContext, chunkClassLoader, pkg, api);
         ResourceApi.installInto(pkg, packageResolver, api);
         return api;

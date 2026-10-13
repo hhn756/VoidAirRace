@@ -8,8 +8,8 @@ import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.componentbase.*;
 import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import org.bukkit.Bukkit;
@@ -54,8 +54,8 @@ public class GameTimeComp extends MatchComp
         } else {
             // 尝试读取配置文件
             Integer configValue = Config.getInstance()
-                    .getYmlConfig(PublicFiles.GAME_SETTINGS)
-                    .get(GameSettingKeys.MATCH_DURATION,null);
+                    .getYmlConfig(PublicFile.GAME_SETTING)
+                    .get(GameSettingKey.MATCH_DURATION,null);
             if (configValue != null) {
                 duration = configValue;
             }

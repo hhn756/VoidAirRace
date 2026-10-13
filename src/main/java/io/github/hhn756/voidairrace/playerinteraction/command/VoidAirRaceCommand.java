@@ -17,9 +17,9 @@ import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerStateManager;
 import io.github.hhn756.voidairrace.core.playerstatemanager.StateSystemEntry;
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.config.files.FlagsKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.FlagKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.BootstrapStage;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
@@ -233,8 +233,8 @@ public class VoidAirRaceCommand implements BootstrapStage {
 
                                     // 选中指定地图
                                     Config.getInstance()
-                                            .getYmlConfig(PublicFiles.GAME_SETTINGS)
-                                            .set(GameSettingKeys.SELECTED_MAP_ID, formatedMapId.toString());
+                                            .getYmlConfig(PublicFile.GAME_SETTING)
+                                            .set(GameSettingKey.SELECTED_MAP_ID, formatedMapId.toString());
 
                                     // 提示
                                     sender.sendMessage(
@@ -253,8 +253,8 @@ public class VoidAirRaceCommand implements BootstrapStage {
                             CommandSender sender = ctx.getSource().getSender();
                             NamespacedKey selectedMapId = NamespacedKey.fromString(
                                     Config.getInstance()
-                                            .getYmlConfig(PublicFiles.GAME_SETTINGS)
-                                            .get(GameSettingKeys.SELECTED_MAP_ID, null)
+                                            .getYmlConfig(PublicFile.GAME_SETTING)
+                                            .get(GameSettingKey.SELECTED_MAP_ID, null)
                             );
 
                             MapEntry mapEntry = Registry.getInstance().category(Categories.MAP).get(selectedMapId);
@@ -392,8 +392,8 @@ public class VoidAirRaceCommand implements BootstrapStage {
                                     server.broadcast(Component.text(
                                             "“服务器启动时结束比赛” 标志状态："
                                                     + Config.getInstance()
-                                                    .getYmlConfig(PublicFiles.FLAGS)
-                                                    .get(FlagsKeys.MATCH_ABORTED))
+                                                    .getYmlConfig(PublicFile.FLAG)
+                                                    .get(FlagKey.MATCH_ABORTED))
                                     );
 
                                     ArenaManager arenaManager = ArenaManager.getInstance();

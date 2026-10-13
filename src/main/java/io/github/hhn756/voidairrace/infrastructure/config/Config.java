@@ -129,35 +129,25 @@ public class Config implements Module {
     /**
      * 获取指定配置文件的可观察实例<br>
      * 如果配置文件尚未加载，则会从磁盘加载；若文件不存在，则由配置键定义物化生成默认配置文件<br>
-     * 实例类型由定义对象中记录的实现类型（{@code IMPL}）决定，并据此分发到对应的加载器
+     * 实例类型由定义对象记录的实现类型决定（当前唯一支持的实现类型为{@link YamlConfig}）
      *
      * @param configDefinition 要读取的配置文件的定义对象
      *
-     * @return 配置实例，类型为定义对象记录的实现类型
+     * @return 配置实例
      *
      * @throws ConfigException 因各种原因获取配置失败时抛出
      */
-    public <IMPL extends FileConfig> @NonNull IMPL getYmlConfig(@NonNull ConfigDefinition<IMPL> configDefinition)
+    public @NonNull YamlConfig getYmlConfig(@NonNull ConfigDefinition configDefinition)
             throws ConfigException {
         String definedPath = configDefinition.filePath();
-        Class<IMPL> implClass = configDefinition.impl().getTypeClass();
 
-        // 检查配置定义对象中的实现类型，分发到对应的加载器
-        if (!implClass.equals(YamlConfig.class)) logAndThrow(
-                Level.SEVERE,
-                "配置文件 '" + definedPath + "' 请求的实现类型 '" + implClass.getName() + "' 没有对应的加载器");
-
-        // 以下为 YamlConfig（目前唯一支持的实现类型）的加载逻辑
+        // YamlConfig（目前唯一支持的实现类型）的加载逻辑
         File dataSourceFile = new File(configFolder, definedPath + ".yml");
 
         // 返回已加载的配置对象，防止平行配置对象导致状态混乱；减少IO次数
         FileConfig cacheValue = configs.get(definedPath);
         if (cacheValue != null) {
-            if (!implClass.isInstance(cacheValue)) logAndThrow(
-                    Level.SEVERE,
-                    "配置文件 '" + definedPath + "' 已作为 '" + cacheValue.getClass().getName()
-                    + "' 加载，与定义对象记录的实现类型 '" + implClass.getName() + "' 不符");
-            return implClass.cast(cacheValue);
+            return (YamlConfig) cacheValue;
         }
 
         // 检查文件的上级目录是否存在
@@ -177,7 +167,7 @@ public class Config implements Module {
                 "配置文件 '" + dataSourceFile.getAbsolutePath() + "' 无法读取，请检查权限");
 
         // 从文件加载配置数据
-        return implClass.cast(loadYmlConfig(configDefinition, dataSourceFile));
+        return loadYmlConfig(configDefinition, dataSourceFile);
     }
 
     /**
@@ -186,7 +176,7 @@ public class Config implements Module {
      * @param configDefinition 要加载的文件的定义对象
      * @param dataSource       从指定文件读取配置数据
      * */
-    private @NonNull YamlConfig loadYmlConfig(@NonNull ConfigDefinition<?> configDefinition, @NonNull File dataSource)
+    private @NonNull YamlConfig loadYmlConfig(@NonNull ConfigDefinition configDefinition, @NonNull File dataSource)
             throws ConfigException {
         YamlConfig ymlConfig = new YamlConfig(configDefinition, dataSource);
         try {
@@ -229,7 +219,7 @@ public class Config implements Module {
      *
      * @throws ConfigException 写文件失败时抛出
      */
-    private void materializeDefaultFile(@NonNull ConfigDefinition<?> definition, @NonNull File target)
+    private void materializeDefaultFile(@NonNull ConfigDefinition definition, @NonNull File target)
             throws ConfigException {
         YamlConfiguration defaults = new YamlConfiguration();
         for (ConfigKey<?> key : definition.keys()) {
@@ -256,7 +246,7 @@ public class Config implements Module {
      *
      * @return 是否发生过补齐；调用方应保存并重载配置
      * */
-    private boolean fillMissingKeys(@NonNull ConfigDefinition<?> definition, @NonNull YamlConfig target) {
+    private boolean fillMissingKeys(@NonNull ConfigDefinition definition, @NonNull YamlConfig target) {
         boolean filled = false;
         for (ConfigKey<?> key : definition.keys()) {
             if (target.contains(key.path())) continue;

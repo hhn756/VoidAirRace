@@ -2,8 +2,8 @@ package io.github.hhn756.voidairrace.addons.usrpackage.script.api.register;
 
 import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
-import io.github.hhn756.voidairrace.addons.usrpackage.script.api.LuaHandles;
 import io.github.hhn756.voidairrace.addons.usrpackage.script.api.ScriptCallGate;
+import io.github.hhn756.voidairrace.addons.usrpackage.script.api.handle.HandleApi;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.map.PlayableGameMap;
@@ -22,7 +22,7 @@ import org.jspecify.annotations.Nullable;
  * 用户地图的 Java 适配器：把脚本注册的地图描述适配为{@link PlayableGameMap}<br>
  * 每场使用该地图的比赛经注册项实例化一个全新的本类实例；脚本提供的
  * {@code on_start}/{@code on_over} 回调在比赛开始/结束时经调用门触发，
- * 参数为该场比赛的句柄表（见{@link LuaHandles}）
+ * 参数为该场比赛的句柄表（见{@link HandleApi}）
  * <p>
  * 地图无异步初始化：包加载成功即视为就绪（{@link #isReady()}恒真）
  * <p>
@@ -129,7 +129,7 @@ final class LuaGameMap extends PlayableGameMap {
         if (onStartFn == null) return OperationResult.success();
         // 调用门成功一律携带返回值数组（on_start 无返回值协议，丢弃即可），
         // 失败一律无用户消息（reasonKey 为 null）——causedBy 恒走 unknown 分支，两键相同
-        return ScriptCallGate.call(stateContext, chunkClassLoader, onStartFn, LuaHandles.forMatch(stateContext, match))
+        return ScriptCallGate.call(stateContext, chunkClassLoader, onStartFn, HandleApi.forMatch(stateContext, match))
                 .causedBy(TranslateKeys.Map.LUA_MAP_START_FAILED, TranslateKeys.Map.LUA_MAP_START_FAILED)
                 .toOperation();
     }
@@ -138,7 +138,7 @@ final class LuaGameMap extends PlayableGameMap {
     public @NonNull OperationResult over(@NonNull Match match) {
         if (onOverFn == null) return OperationResult.success();
         ValueResult<Object[]> result = ScriptCallGate.call(
-                stateContext, chunkClassLoader, onOverFn, LuaHandles.forMatch(stateContext, match));
+                stateContext, chunkClassLoader, onOverFn, HandleApi.forMatch(stateContext, match));
         if (!result.hasValue()) {
             // 收尾阶段失败只记日志，不阻断比赛结束流程（对齐规则 on_disable 的处理）
             VoidAirRace.getInstance().getLogger().warning(

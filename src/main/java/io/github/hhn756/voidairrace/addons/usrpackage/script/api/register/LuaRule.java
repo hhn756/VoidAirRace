@@ -3,8 +3,8 @@ package io.github.hhn756.voidairrace.addons.usrpackage.script.api.register;
 import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
-import io.github.hhn756.voidairrace.addons.usrpackage.script.api.LuaHandles;
 import io.github.hhn756.voidairrace.addons.usrpackage.script.api.ScriptCallGate;
+import io.github.hhn756.voidairrace.addons.usrpackage.script.api.handle.HandleApi;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.matchrule.MatchRule;
@@ -24,7 +24,7 @@ import java.util.function.Supplier;
  * 用户规则的 Java 适配器：把脚本注册的规则描述适配为{@link MatchRule}<br>
  * 每次经注册项实例化规则时产出一个全新的本类实例；脚本提供的
  * {@code on_enable}/{@code on_disable}/{@code tick} 回调在对应生命周期经调用门触发，
- * 参数为当前比赛的句柄表（见{@link LuaHandles}）
+ * 参数为当前比赛的句柄表（见{@link HandleApi}）
  * <p>
  * 回调失败语义：{@code on_enable} 失败（调用失败或返回协议不通过）取消启用规则；
  * {@code on_disable}/{@code tick} 失败只记日志，不中断比赛收尾
@@ -132,7 +132,7 @@ public final class LuaRule implements MatchRule {
     public @NonNull OperationResult onEnable(@NonNull Match match) {
         if (onEnableFn == null) return OperationResult.success();
         ValueResult<Object[]> result = ScriptCallGate.call(
-                stateContext, chunkClassLoader, onEnableFn, LuaHandles.forMatch(stateContext, match));
+                stateContext, chunkClassLoader, onEnableFn, HandleApi.forMatch(stateContext, match));
         if (!result.hasValue()) {
             return OperationResult.failure(
                     TranslateKeys.MatchRule.USER_RULE_ON_ENABLE_FAILED,
@@ -172,7 +172,7 @@ public final class LuaRule implements MatchRule {
     private void callVoid(@NonNull Match match, @Nullable LuaFunction fn, @NonNull String what) {
         if (fn == null) return;
         ValueResult<Object[]> result = ScriptCallGate.call(
-                stateContext, chunkClassLoader, fn, LuaHandles.forMatch(stateContext, match));
+                stateContext, chunkClassLoader, fn, HandleApi.forMatch(stateContext, match));
         if (!result.hasValue()) {
             VoidAirRace.getInstance().getLogger().warning(
                     "用户规则的 " + what + " 回调调用失败：" + owner + "（" + result.techMessage() + "）"

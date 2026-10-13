@@ -23,9 +23,9 @@ import java.util.Set;
  */
 public class YamlSection implements ConfigurationSection {
     private final ConfigurationSection delegate;
-    private final ConfigDefinition<?> source;
+    private final ConfigDefinition source;
 
-    public YamlSection(@NonNull ConfigurationSection delegate, @NonNull ConfigDefinition<?> source) {
+    public YamlSection(@NonNull ConfigurationSection delegate, @NonNull ConfigDefinition source) {
         this.delegate = delegate;
         this.source = source;
     }

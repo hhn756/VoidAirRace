@@ -5,7 +5,7 @@ import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigDefinition;
-import io.github.hhn756.voidairrace.infrastructure.config.FileConfig;
+import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
@@ -40,7 +40,7 @@ public class MatchComp {
      *
      * @see Config#getYmlConfig(ConfigDefinition)
      * */
-    public <IMPL extends FileConfig> @NonNull IMPL getYmlConfig(@NonNull ConfigDefinition<IMPL> file) {
+    public @NonNull YamlConfig getYmlConfig(@NonNull ConfigDefinition file) {
         return Config.getInstance().getYmlConfig(file);
     }
 }

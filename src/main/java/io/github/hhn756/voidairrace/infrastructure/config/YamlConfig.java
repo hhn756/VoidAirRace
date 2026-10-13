@@ -25,13 +25,13 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
     /**
      * 当前配置所属的配置文件枚举
      */
-    private final ConfigDefinition<?> definition;
+    private final ConfigDefinition definition;
 
     /** 加载时的源文件，save()/saveAtomic() 无参形式的目标 */
     private final @NonNull File sourceFile;
 
     @Override
-    public @NonNull ConfigDefinition<?> getDefine() {
+    public @NonNull ConfigDefinition getDefine() {
         return definition;
     }
 
@@ -41,7 +41,7 @@ public class YamlConfig extends YamlConfiguration implements FileConfig {
      * @param definition 源配置文件
      * @param sourceFile 加载时的源文件，作为无参保存的目标
      */
-    public YamlConfig(@NonNull ConfigDefinition<?> definition, @NonNull File sourceFile) {
+    public YamlConfig(@NonNull ConfigDefinition definition, @NonNull File sourceFile) {
         this.definition = definition;
         this.sourceFile = sourceFile;
     }

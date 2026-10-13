@@ -9,8 +9,8 @@ import io.github.hhn756.voidairrace.core.team.TeamRoster;
 import io.github.hhn756.voidairrace.event.MatchStartedEvent;
 import io.github.hhn756.voidairrace.event.PlayerJoinMatchEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GlobalSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -34,8 +34,8 @@ public class Free implements PlayerState, DefaultState, Listener {
     public void onCutin(Player player) {
         player.setGameMode(GameMode.ADVENTURE);
         player.teleport(
-                Config.getInstance().getYmlConfig(PublicFiles.GLOBAL_SETTINGS)
-                        .get(GlobalSettingKeys.SPAWN_LOCATION)
+                Config.getInstance().getYmlConfig(PublicFile.GLOBAL_SETTING)
+                        .get(GlobalSettingKey.SPAWN_LOCATION)
         );
         TeamRoster.getInstance().leave(player);
         player.getInventory().clear();
@@ -71,8 +71,8 @@ public class Free implements PlayerState, DefaultState, Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (!PlayerStateManager.getInstance().onState(event.getPlayer(), stateId)) return;
         event.getPlayer().teleport(
-                Config.getInstance().getYmlConfig(PublicFiles.GLOBAL_SETTINGS)
-                        .get(GlobalSettingKeys.SPAWN_LOCATION)
+                Config.getInstance().getYmlConfig(PublicFile.GLOBAL_SETTING)
+                        .get(GlobalSettingKey.SPAWN_LOCATION)
         );
     }
 
@@ -80,8 +80,8 @@ public class Free implements PlayerState, DefaultState, Listener {
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         if (!PlayerStateManager.getInstance().onState(event.getPlayer(), stateId)) return;
         event.setRespawnLocation(
-                Config.getInstance().getYmlConfig(PublicFiles.GLOBAL_SETTINGS)
-                        .get(GlobalSettingKeys.SPAWN_LOCATION)
+                Config.getInstance().getYmlConfig(PublicFile.GLOBAL_SETTING)
+                        .get(GlobalSettingKey.SPAWN_LOCATION)
         );
     }
 }

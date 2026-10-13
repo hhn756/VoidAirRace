@@ -4,8 +4,8 @@ import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.map.MapInitializer;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.ListenerProvider;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
@@ -37,8 +37,8 @@ public class LobbySetup implements Module, ListenerProvider {
     private void onLoad() {
         NamespacedKey selectedMapId = NamespacedKey.fromString(
                 Config.getInstance()
-                        .getYmlConfig(PublicFiles.GAME_SETTINGS)
-                        .get(GameSettingKeys.SELECTED_MAP_ID)
+                        .getYmlConfig(PublicFile.GAME_SETTING)
+                        .get(GameSettingKey.SELECTED_MAP_ID)
         );
         MapEntry mapEntry = Registry.getInstance().category(Categories.MAP).get(selectedMapId);
         if (mapEntry != null && mapEntry.maxTeams() != null) {

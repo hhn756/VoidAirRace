@@ -10,7 +10,7 @@ import io.github.hhn756.voidairrace.core.team.Teams;
 import io.github.hhn756.voidairrace.event.ConfigFieldChangeEvent;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
 import io.github.hhn756.voidairrace.event.MatchStartedEvent;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -78,10 +78,10 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onConfigChange(ConfigFieldChangeEvent event) {
-        if (event.getPath().equals(GameSettingKeys.SELECTED_MAP_ID.path())) {
+        if (event.getPath().equals(GameSettingKey.SELECTED_MAP_ID.path())) {
             NamespacedKey newMapId;
             Registry registry = Registry.getInstance();
-            String rawMapId = event.getNewValue(GameSettingKeys.SELECTED_MAP_ID);
+            String rawMapId = event.getNewValue(GameSettingKey.SELECTED_MAP_ID);
             if (rawMapId != null) {
                 newMapId = NamespacedKey.fromString(rawMapId);
             } else {

@@ -3,8 +3,8 @@ package io.github.hhn756.voidairrace.core.match;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
-import io.github.hhn756.voidairrace.infrastructure.config.files.FlagsKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.FlagKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
@@ -44,15 +44,15 @@ public class MatchCoordinator implements Module {
      * 恢复在插件启用前异常结束的比赛
      * */
     private void checkMatchAbort() {
-        YamlConfig flagConfig = Config.getInstance().getYmlConfig(PublicFiles.FLAGS);
+        YamlConfig flagConfig = Config.getInstance().getYmlConfig(PublicFile.FLAG);
         // 默认值为false：插件初次运行标记文件未创建时视作不存在 异常结束的比赛
-        boolean isAborted = flagConfig.get(FlagsKeys.MATCH_ABORTED, false);
+        boolean isAborted = flagConfig.get(FlagKey.MATCH_ABORTED, false);
         if (isAborted) {
             // TODO: 恢复上次异常结束的比赛
 
 
             // 标记 “比赛异常结束已处理”
-            flagConfig.set(FlagsKeys.MATCH_ABORTED, false);
+            flagConfig.set(FlagKey.MATCH_ABORTED, false);
         }
     }
 
@@ -178,12 +178,12 @@ public class MatchCoordinator implements Module {
     }
 
     /**
-     * 将 {@link PublicFiles#FLAGS} 配置文件中的 {@link FlagsKeys#MATCH_ABORTED} 标志设置为指定值，并保存配置文件
+     * 将 {@link PublicFile#FLAG} 配置文件中的 {@link FlagKey#MATCH_ABORTED} 标志设置为指定值，并保存配置文件
      * */
     private void setAndSaveStopFlag(boolean newValue) {
         Config configInst = Config.getInstance();
-        YamlConfig flags = configInst.getYmlConfig(PublicFiles.FLAGS);
-        flags.set(FlagsKeys.MATCH_ABORTED, newValue);
+        YamlConfig flags = configInst.getYmlConfig(PublicFile.FLAG);
+        flags.set(FlagKey.MATCH_ABORTED, newValue);
         flags.saveAtomic();
     }
 

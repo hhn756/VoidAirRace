@@ -4,7 +4,7 @@ import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
@@ -46,7 +46,7 @@ public class MapInitializer implements Module {
      * 依赖解析等有副作用的工作必须在此完成：Modules 会先实例化全部模块，再按拓扑顺序加载
      * */
     private void onLoad() {
-        flagConfig = Config.getInstance().getYmlConfig(PublicFiles.FLAGS);
+        flagConfig = Config.getInstance().getYmlConfig(PublicFile.FLAG);
         mainClass = VoidAirRace.getInstance();
         logger = mainClass.getLogger();
 

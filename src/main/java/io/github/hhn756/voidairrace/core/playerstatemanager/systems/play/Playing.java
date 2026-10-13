@@ -7,8 +7,8 @@ import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerState;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerStateManager;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GlobalSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -44,8 +44,8 @@ public class Playing implements PlayerState, Listener {
         if (!PlayerStateManager.getInstance().onState(player, stateId)) return;
 
         event.setRespawnLocation(
-                Config.getInstance().getYmlConfig(PublicFiles.GLOBAL_SETTINGS)
-                        .get(GlobalSettingKeys.SPAWN_LOCATION)
+                Config.getInstance().getYmlConfig(PublicFile.GLOBAL_SETTING)
+                        .get(GlobalSettingKey.SPAWN_LOCATION)
         );
         leaveMatch(player);
     }

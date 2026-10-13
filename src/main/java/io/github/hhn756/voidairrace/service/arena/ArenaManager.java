@@ -6,9 +6,9 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.exception.ArenaException;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GlobalSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.util.JarEntryUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.WorldCreatorUtil;
@@ -61,8 +61,8 @@ public class ArenaManager implements Module {
         VoidAirRace mainClass = VoidAirRace.getInstance();
 
         // 读取最大竞技场数量，若配置项不存在或无效则使用默认值
-        YamlConfig gameSettings = Config.getInstance().getYmlConfig(PublicFiles.GAME_SETTINGS);
-        this.maxArenas = gameSettings.get(GameSettingKeys.MAX_ARENAS, 16);
+        YamlConfig gameSettings = Config.getInstance().getYmlConfig(PublicFile.GAME_SETTING);
+        this.maxArenas = gameSettings.get(GameSettingKey.MAX_ARENAS, 16);
         if (maxArenas < 1) {
             mainClass.getLogger().warning("配置中的最大竞技场数量小于 1，已强制改为 1");
             maxArenas = 1;
@@ -347,8 +347,8 @@ public class ArenaManager implements Module {
 
         // 将世界内的所有玩家传送回出生点
         Location spawnLoc = Config.getInstance()
-                .getYmlConfig(PublicFiles.GLOBAL_SETTINGS)
-                .get(GlobalSettingKeys.SPAWN_LOCATION);
+                .getYmlConfig(PublicFile.GLOBAL_SETTING)
+                .get(GlobalSettingKey.SPAWN_LOCATION);
         for (Player player : world.getPlayers()) {
             player.teleport(spawnLoc);
         }

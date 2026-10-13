@@ -14,7 +14,7 @@ public interface FileConfig {
     /**
      * @return 配置文件对应的定义对象
      * */
-    @NonNull ConfigDefinition<?> getDefine();
+    @NonNull ConfigDefinition getDefine();
 
     /**
      * 获取配置数据

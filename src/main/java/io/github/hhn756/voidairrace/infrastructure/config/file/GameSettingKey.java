@@ -1,4 +1,4 @@
-package io.github.hhn756.voidairrace.infrastructure.config.files;
+package io.github.hhn756.voidairrace.infrastructure.config.file;
 
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigKey;
 import org.bukkit.NamespacedKey;
@@ -10,8 +10,8 @@ import java.util.List;
  * 游戏设置配置文件（game_settings.yml）中定义的配置键
  * 使用静态常量代替枚举，实现完全的类型安全
  */
-public final class GameSettingKeys {
-    private GameSettingKeys() {}
+public final class GameSettingKey {
+    private GameSettingKey() {}
 
     /**
      * 已选择的地图ID，一定是{@code "namespace:key"}格式的字符串形式的{@link NamespacedKey}

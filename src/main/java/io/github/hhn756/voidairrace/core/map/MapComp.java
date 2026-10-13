@@ -9,8 +9,8 @@ import io.github.hhn756.voidairrace.core.match.DataKey;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.componentbase.*;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
-import io.github.hhn756.voidairrace.infrastructure.config.files.GameSettingKeys;
-import io.github.hhn756.voidairrace.infrastructure.config.files.PublicFiles;
+import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
@@ -63,8 +63,8 @@ public class MapComp extends MatchComp
     public @NonNull ValueResult<MapConfig> createDefaultConfig() {
         NamespacedKey selectedMapId = NamespacedKey.fromString(
                 Config.getInstance()
-                        .getYmlConfig(PublicFiles.GAME_SETTINGS)
-                        .get(GameSettingKeys.SELECTED_MAP_ID, GrassLand.getID().toString())
+                        .getYmlConfig(PublicFile.GAME_SETTING)
+                        .get(GameSettingKey.SELECTED_MAP_ID, GrassLand.getID().toString())
         );
         MapEntry mapEntry = Registry.getInstance().category(Categories.MAP).get(selectedMapId);
 

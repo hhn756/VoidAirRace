@@ -1,10 +1,10 @@
-package io.github.hhn756.voidairrace.infrastructure.config.files;
+package io.github.hhn756.voidairrace.infrastructure.config.file;
 
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigKey;
 import org.bukkit.configuration.ConfigurationSection;
 
-public final class FlagsKeys {
-    private FlagsKeys() {}
+public final class FlagKey {
+    private FlagKey() {}
 
     /**
      * 所有地图的初始化状态
