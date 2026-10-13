@@ -26,7 +26,7 @@ import java.util.TreeMap
  *   截断点之后的祖先不会成键；运行时查不到键会回退全量扫描，正确性不受影响。
  * - 增量：@InputFiles 挂 compileJava 输出，@OutputDirectory 落 build/generated。
  *
- * 索引路径与 ClassScanner.INDEX_RESOURCE 保持一致：META-INF/voidairrace/subclass-index.txt
+ * 索引路径与 ClassScanner.INDEX_RESOURCE 保持一致：voidairrace/subclass-index.txt
  * 格式：每行 `父类型FQN 子1FQN 子2FQN ...`（FQN 用点分隔；嵌套类为 A$B，可直接 loadClass），
  * 键与组内值均排序，输出确定性。
  */
@@ -37,7 +37,7 @@ abstract class SubclassIndexTask : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val classesDirs: ConfigurableFileCollection
 
-    /** 索引输出根目录，任务在其下写 META-INF/voidairrace/subclass-index.txt */
+    /** 索引输出根目录，任务在其下写 voidairrace/subclass-index.txt（子目录名即 jar 内目标目录） */
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -84,8 +84,7 @@ abstract class SubclassIndexTask : DefaultTask() {
             }
         }
 
-        val outFile = outputDir.get().asFile
-            .resolve("META-INF").resolve("voidairrace").resolve("subclass-index.txt")
+        val outFile = outputDir.get().asFile.resolve("voidairrace").resolve("subclass-index.txt")
         outFile.parentFile.mkdirs()
         val sb = StringBuilder()
         sb.appendLine("# 由 generateSubclassIndex 任务生成，请勿手动编辑。")

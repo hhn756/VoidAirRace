@@ -4,7 +4,7 @@ package io.github.hhn756.voidairrace.constants;
  * 插件中资源文件的路径，不包含后缀
  * */
 public enum ResourcePath {
-    DATAPACK("/META-INF/datapack/");
+    DATAPACK("/voidairrace/datapack/");
 
     private final String path;
 

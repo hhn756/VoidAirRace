@@ -27,7 +27,7 @@ public class ClassScanner {
     /**
      * 编译期子类索引的资源路径，与 buildSrc SubclassIndexTask 的输出位置保持一致
      * */
-    public static final String INDEX_RESOURCE = "META-INF/voidairrace/subclass-index.txt";
+    public static final String INDEX_RESOURCE = "voidairrace/subclass-index.txt";
 
     /**
      * 读索引固定使用的类加载器：插件主类的类加载器（索引与插件主类随同一 jar）

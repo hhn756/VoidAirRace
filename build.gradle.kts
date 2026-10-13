@@ -51,6 +51,26 @@ java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
+/*
+ * 许可证随附：将本项目与第三方组件的许可证文本打进 jar 的 META-INF/ 随 jar 分发
+ * 文件名带组件后缀，与依赖 jar 可能自带的 META-INF/LICENSE 区分开
+ * （Rembulan 与 ASM 的官方 jar 内均未附带许可证文件，此处的副本是打包后的唯一来源）
+ */
+tasks.processResources {
+    from("LICENSE") {
+        into("META-INF")
+        rename { "LICENSE-Voidairrace.txt" }
+    }
+    from("libs/rembulan/LICENSE.txt") {
+        into("META-INF")
+        rename { "LICENSE-Rembulan.txt" }
+    }
+    from("libs/asm/LICENSE.txt") {
+        into("META-INF")
+        rename { "LICENSE-ASM.txt" }
+    }
+}
+
 tasks.shadowJar {
     dependencies {
         exclude(dependency("net.kyori:adventure-api"))
@@ -59,7 +79,7 @@ tasks.shadowJar {
 
 /*
  * 全量编译期子类索引（供 ClassScanner 运行时读取，加快启动）
- * 扫描主源码集全部 .class 的继承关系，输出 META-INF/voidairrace/subclass-index.txt；
+ * 扫描主源码集全部 .class 的继承关系，输出 voidairrace/subclass-index.txt；
  * 任务经 sourceSets.resources.srcDir 挂进资源流水线，随 jar/shadow/reobf 打包，
  * 并作为 processResources 的上游被自动调度（无需手写 dependsOn）。
  * 通用全量：新增扫描需求（ClassScanner.scanSubclasses 调用）无需改动此处配置。
@@ -110,7 +130,7 @@ tasks.register("generateTranslateKeys") {
 
         // 语言文件固定取插件自带资源包
         val langFile = layout.projectDirectory
-            .file("src/main/resources/META-INF/resourcepack/assets/minecraft/lang/zh_cn.json").asFile
+            .file("src/main/resources/voidairrace/resourcepack/assets/minecraft/lang/zh_cn.json").asFile
         if (!langFile.isFile)
             throw GradleException("语言文件不存在：${langFile.path}")
 
