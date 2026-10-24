@@ -101,7 +101,7 @@ public class MatchConfig {
             }
 
             // 记录（newInstance 的 WithValue 分支必然携带组件实例，value() 此处不为 null）
-            components.put(compEntry.getCompType(), instantiateResult.value());
+            components.put(compEntry.type(), instantiateResult.value());
         }
 
         // 加载组件的自定义配置数据

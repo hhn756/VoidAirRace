@@ -6,10 +6,10 @@ import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.PlayableGameMap;
 import io.github.hhn756.voidairrace.core.match.Match;
-import io.github.hhn756.voidairrace.core.match.basecomponents.contestant.ContestantComp;
-import io.github.hhn756.voidairrace.core.match.basecomponents.scope.AreaTags;
-import io.github.hhn756.voidairrace.core.match.basecomponents.scope.MatchArea;
-import io.github.hhn756.voidairrace.core.match.basecomponents.scope.ScopeComp;
+import io.github.hhn756.voidairrace.core.match.component.contestant.ContestantComp;
+import io.github.hhn756.voidairrace.core.match.component.scope.AreaTags;
+import io.github.hhn756.voidairrace.core.match.component.scope.MatchArea;
+import io.github.hhn756.voidairrace.core.match.component.scope.ScopeComp;
 import io.github.hhn756.voidairrace.core.matchrule.RuleComp;
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
 import io.github.hhn756.voidairrace.exception.ArenaException;
@@ -79,7 +79,7 @@ public class GrassLand extends PlayableGameMap implements Listener {
         this.match = match;
 
         // 加载竞技场；借用失败时把借用模块给出的原因挂到“草地地图开始失败”键对上
-        ValueResult<ArenaToken> borrowResult = ArenaManager.getInstance().borrow();
+        ValueResult<ArenaToken> borrowResult = ArenaManager.getInstance().borrow(Const.MAP_ID.toString());
         if (!(borrowResult instanceof ValueResult.WithValue(var arenaToken))) {
             return borrowResult.expectValue(
                     TranslateKeys.Map.GRASS_LAND_SELECTED_START_FAILURE_SPECIFIED_CAUSE,
@@ -195,7 +195,7 @@ public class GrassLand extends PlayableGameMap implements Listener {
      */
     private CompletableFuture<?> findSupplyBoxes() {
         // 申请临时竞技场
-        ValueResult<ArenaToken> borrowResult = ArenaManager.getInstance().borrow();
+        ValueResult<ArenaToken> borrowResult = ArenaManager.getInstance().borrow(Const.MAP_ID + ":init");
         if (!(borrowResult instanceof ValueResult.WithValue(var tempArena))) {
             return CompletableFuture.failedFuture(
                     new NullPointerException("未申请到临时竞技场，无法初始化")

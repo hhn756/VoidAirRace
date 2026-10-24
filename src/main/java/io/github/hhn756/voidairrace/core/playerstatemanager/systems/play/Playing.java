@@ -2,7 +2,7 @@ package io.github.hhn756.voidairrace.core.playerstatemanager.systems.play;
 
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.MatchCoordinator;
-import io.github.hhn756.voidairrace.core.match.basecomponents.contestant.ContestantComp;
+import io.github.hhn756.voidairrace.core.match.component.contestant.ContestantComp;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerState;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerStateManager;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
@@ -21,7 +21,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
  * 代表玩家正在参加比赛的状态
  * */
 public class Playing implements PlayerState, Listener {
-    private static final NamespacedKey stateId = PlayState.PLAYING.getValue();
+    private static final NamespacedKey stateId = PlayState.PLAYING.getId();
 
     @Override
     public NamespacedKey getId() {
@@ -65,7 +65,7 @@ public class Playing implements PlayerState, Listener {
 
     private void leaveMatch(Player player) {
         Match currentMatch = MatchCoordinator.getInstance().getCurrentMatch();
-        PlayerStateManager.getInstance().toggle(player, PlayState.FREE.getValue());
+        PlayerStateManager.getInstance().toggle(player, PlayState.FREE.getId());
         if (currentMatch != null) {
             currentMatch.comp(ContestantComp.class).leaveMatch(player);
         }

@@ -3,7 +3,7 @@ package io.github.hhn756.voidairrace.playerinteraction.audiovisualservices;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.MatchCoordinator;
-import io.github.hhn756.voidairrace.core.match.basecomponents.gametime.GameTimeComp;
+import io.github.hhn756.voidairrace.core.match.component.gametime.GameTimeComp;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
 import io.github.hhn756.voidairrace.event.MatchStartedEvent;
 import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;

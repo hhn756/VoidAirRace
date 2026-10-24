@@ -57,8 +57,7 @@ public final class Modules {
      * */
     private static final @NonNull Map<Class<? extends Module>, List<Listener>> REGISTERED_LISTENERS = new HashMap<>();
 
-    private Modules() {
-    }
+    private Modules() {}
 
     /**
      * 引导全部引导阶段任务：扫描 {@link BootstrapStage} 的全部实现类，逐个实例化并执行 {@code onBootstrap}

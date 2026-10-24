@@ -16,6 +16,10 @@ class ArenaState {
     private @Nullable World loadedWorld = null;
     /** 对于此竞技场有效的借据的 uid，用于防止使用旧借据 */
     private @Nullable Integer activeTokenUid = null;
+    /** 借入者标识（包 Id 或内置地图名），借用时登记，用于审计与无空闲时的占用提示 */
+    private @Nullable String borrower = null;
+    /** 借据已登记为某场比赛的区域（比赛结束流程负责归还），此时手动归还通道关闭 */
+    private boolean matchArea = false;
 
     /**
      * @return 竞技场借用状态，{@code true} 表示已被借用
@@ -48,5 +52,27 @@ class ArenaState {
 
     void setActiveTokenUid(@Nullable Integer activeTokenUid) {
         this.activeTokenUid = activeTokenUid;
+    }
+
+    /**
+     * @return 借入者标识，未借出时为 {@code null}
+     * */
+    @Nullable String getBorrower() {
+        return borrower;
+    }
+
+    void setBorrower(@Nullable String borrower) {
+        this.borrower = borrower;
+    }
+
+    /**
+     * @return {@code true} 表示借据已登记为比赛区域，手动归还通道关闭
+     * */
+    boolean isMatchArea() {
+        return matchArea;
+    }
+
+    void setMatchArea(boolean matchArea) {
+        this.matchArea = matchArea;
     }
 }

@@ -8,7 +8,10 @@ import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -16,7 +19,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 
-public class PlayerInitializer implements Module, ListenerProvider {
+public class PlayerInitializer implements Module, ListenerProvider, Listener {
     private static @Nullable PlayerInitializer instance;
 
     public static @NonNull PlayerInitializer getInstance() {
@@ -35,7 +38,7 @@ public class PlayerInitializer implements Module, ListenerProvider {
 
     @Override
     public @NonNull Collection<@NonNull Listener> getListeners() {
-        return List.of(new EventListener());
+        return List.of(this);
     }
 
     /**
@@ -56,13 +59,18 @@ public class PlayerInitializer implements Module, ListenerProvider {
         instance = null;
     }
 
+    @EventHandler(priority = EventPriority.LOWEST) // 确保进游戏后首先初始化
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        initializePlayer(event.getPlayer());
+    }
+
     /**
-     * 初始化指定玩家，如果它在此之前已经初始化过了那么不会执行任何操作
+     * 初始化指定玩家，不会重复初始化（不会对已初始化过的指定玩家执行操作）
      *
      * @param player 指定玩家
      */
     public void initializePlayer(@NonNull Player player) {
-        // 检查玩家初始化状态
+        // 不重复初始化
         if (isInitialized(player)) return;
 
         // 在所有状态体系中进入默认状态
@@ -86,6 +94,13 @@ public class PlayerInitializer implements Module, ListenerProvider {
         initializePlayer(player);
     }
 
+    /**
+     * 检查玩家初始化状态
+     *
+     * @param player 指定玩家
+     *
+     * @return 如果指定玩家已初始化将返回{@code true}；如果指定玩家初始化状态为{@code null}或未初始化将返回{@code false}
+     * */
     public boolean isInitialized(@NonNull Player player) {
         Boolean initState = player.getPersistentDataContainer().get(
                 PlayerPDCKey.INITIALIZED.path(),

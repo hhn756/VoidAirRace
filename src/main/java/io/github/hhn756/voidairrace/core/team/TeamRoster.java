@@ -24,7 +24,7 @@ public class TeamRoster implements Module {
 
     // ------
 
-    private @NonNull Scoreboard teamScb;
+    private Scoreboard teamScb;
     private final @NonNull LinkedHashMap<@NonNull Teams, @NonNull Team> enumToTeamMap = new LinkedHashMap<>();
     private final @NonNull LinkedHashMap<@NonNull Team, @NonNull Teams> teamToEnumMap = new LinkedHashMap<>();
 

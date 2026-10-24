@@ -45,6 +45,20 @@ public class SchedulingUtil implements Module {
     }
 
     /**
+     * 在主线程延迟执行一个任务
+     *
+     * @param runnable 要执行的任务
+     * @param delayTicks 延迟的 tick 数
+     *
+     * @return Bukkit 任务
+     *
+     * @see BukkitTask
+     * */
+    public static @NonNull BukkitTask runOnMainThreadLater(@NonNull Runnable runnable, long delayTicks) {
+        return bukkitScheduler.runTaskLater(mainClass, runnable, delayTicks);
+    }
+
+    /**
      * 异步执行一个任务
      *
      * @param runnable 要执行的任务

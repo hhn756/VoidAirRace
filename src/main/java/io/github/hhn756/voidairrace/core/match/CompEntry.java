@@ -20,13 +20,13 @@ public class CompEntry {
     /**
      * 构造一个记录指定比赛组件的组件注册项对象
      *
-     * @param compType 新实例将要代表的比赛组件类型，其必须要有一个无参数的构造器
+     * @param type 新实例将要代表的比赛组件类型，其必须要有一个无参数的构造器
      *
      * @throws NoSuchMethodException 如果指定组件类型没有无参构造器
      * */
-    CompEntry(@NonNull Class<MatchComp> compType) throws NoSuchMethodException {
-        this.compType = compType;
-        constructor = compType.getConstructor();
+    CompEntry(@NonNull Class<MatchComp> type) throws NoSuchMethodException {
+        this.compType = type;
+        constructor = type.getConstructor();
     }
 
     /**
@@ -42,7 +42,7 @@ public class CompEntry {
     /**
      * @return 所记录的组件类型
      * */
-    public @NonNull Class<MatchComp> getCompType() {
+    public @NonNull Class<MatchComp> type() {
         return compType;
     }
 

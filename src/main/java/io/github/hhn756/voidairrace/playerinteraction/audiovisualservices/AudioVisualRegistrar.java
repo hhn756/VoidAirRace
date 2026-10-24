@@ -2,6 +2,7 @@ package io.github.hhn756.voidairrace.playerinteraction.audiovisualservices;
 
 import io.github.hhn756.voidairrace.infrastructure.modules.ListenerProvider;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
+import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
 import org.bukkit.event.Listener;
 import org.jspecify.annotations.NonNull;
 
@@ -14,7 +15,7 @@ import java.util.List;
 public class AudioVisualRegistrar implements Module, ListenerProvider {
     @Override
     public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
-        return List.of();
+        return List.of(SchedulingUtil.class); // 欢迎语需要延后发送，避开资源包语言表尚未就绪的窗口
     }
 
     @Override

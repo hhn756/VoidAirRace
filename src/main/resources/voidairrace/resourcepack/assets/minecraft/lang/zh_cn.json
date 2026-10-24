@@ -154,5 +154,11 @@
   "void_air_race.addons.usr_package.package_not_enabled": "用户包 %s 未启用",
   "void_air_race.addons.usr_package.dependency_missing": "依赖的用户包 %s 未加载",
   "void_air_race.addons.usr_package.dependency_cycle": "用户包存在循环依赖",
-  "void_air_race.addons.usr_package.not_loaded": "无法卸载，用户包 %s 未加载"
+  "void_air_race.addons.usr_package.not_loaded": "无法卸载还未加载的用户包 %s",
+
+  "_": "------ 资源包分发 ------",
+
+  "void_air_race.resource_pack.declined": "你拒绝了本服务器的资源包；正常游玩需要它。请在多人游戏列表中编辑本服务器，把「服务器资源包」设为「询问」或「启用」，然后重进服务器\nYou declined this server's resource pack, which is required for normal play. Please edit this server in your multiplayer list, set \"Server Resource Packs\" to \"Prompt\" or \"Enabled\", and rejoin the server.",
+  "void_air_race.resource_pack.failed_download": "资源包下载失败；正常游玩需要它，请检查网络后重进服务器\nFailed to download this server's resource pack, which is required for normal play; please check your network connection and rejoin the server.",
+  "void_air_race.resource_pack.failed_apply": "资源包未能应用；正常游玩需要它，请检查客户端设置后重进服务器\nThis server's resource pack could not be applied, and it is required for normal play; please check your client settings and rejoin the server."
 }

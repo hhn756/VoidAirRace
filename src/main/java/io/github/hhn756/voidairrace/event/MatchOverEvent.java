@@ -3,7 +3,6 @@ package io.github.hhn756.voidairrace.event;
 import io.github.hhn756.voidairrace.core.match.DataKey;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.componentbase.CustomData;
-import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jspecify.annotations.NonNull;
@@ -71,21 +70,12 @@ public class MatchOverEvent extends Event {
     /**
      * 获取指定组件添加的结束上下文
      *
-     * @param component 将返回指定组件所添加的上下文数据
-     * @param dataType 需指定{@code component}所指定组件所添加的自定义数据类型
+     * @param key 组件结束上下文的数据键
      *
      * @return 如果指定组件添加了自定义上下文数据将返回它添加的数据，否则返回{@code null}
      * */
-    public <C extends CustomData> @Nullable C getContext(
-            @NonNull Class<? extends MatchComp> component,
-            Class<C> dataType
-    ) {
-        CustomData customConfig = context.get(component);
-        if (dataType.isInstance(customConfig)) {
-            @SuppressWarnings("unchecked")
-            C result = (C) customConfig;
-            return result;
-        }
-        return null;
+    @SuppressWarnings("unchecked")
+    public <C extends CustomData> @Nullable C getContext(@NonNull DataKey<C> key) {
+        return (C) context.get(key);
     }
 }

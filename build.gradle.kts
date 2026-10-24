@@ -122,6 +122,7 @@ tasks.register("generateTranslateKeys") {
             "$ns.command." to "Command",
             "$ns.team." to "Team",
             "$ns.addons." to "Addons",
+            "$ns.resource_pack." to "ResourcePack",
             "$ns.config." to "Config",
             "$ns.audio_visual_services." to "AudioVisualServices",
             "$ns.base_components." to "BaseComponents",

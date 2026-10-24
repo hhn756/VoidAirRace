@@ -34,7 +34,7 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 
 /**
- * 管理多个竞技场的加载/卸载，每个竞技场用数字 ID 标识（{@code 1} ~ {@code maxArenas}）<br>
+ * 管理多个竞技场的加载/卸载，每个竞技场用数字 ID 标识（{@code 1} ~ {@link GameSettingKey#MAX_ARENAS}）<br>
  * 竞技场世界目录的生命周期与借用一致：加载竞技场数据时经冲突检查后由模板复制创建，
  * 归还/卸载世界时删除；加载前目录不应存在，存在即异常残留或同名的无关目录，拒绝加载
  */
@@ -92,7 +92,7 @@ public class ArenaManager implements Module {
     /**
      * 最大竞技场数量
      * */
-    private @NonNull Integer maxArenas;
+    private @NonNull Integer maxArenas = 0;
 
     /**
      * 提示语列表
@@ -115,25 +115,36 @@ public class ArenaManager implements Module {
     /**
      * 未借出的竞技场数量
      * */
-    private @NonNull Integer freeCount;
+    private @NonNull Integer freeCount = 0;
 
     private ArenaManager() {}
 
     // ------ 借用竞技场世界 ------
 
     /**
-     * 借用一个竞技场世界
+     * 借用一个竞技场世界<br>
+     * 借入者标识用于审计与无空闲时的占用提示；无空闲时失败消息列出各占用者
+     *
+     * @param borrower 借入者标识（用户包 Id 或内置地图名）
      * */
-    public @NonNull ValueResult<ArenaToken> borrow() {
+    public @NonNull ValueResult<ArenaToken> borrow(@NonNull String borrower) {
         Integer freeArenaId = getFreeArena();
-        if (freeArenaId == -1) return ValueResult.failure(
-                TranslateKeys.Arena.ARENA_MANAGER_NO_FREE_ARENA,
-                "无空闲竞技场（共 " + maxArenas + " 个）"
-        );
+        if (freeArenaId == -1) {
+            String occupants = arenaStates.values().stream()
+                    .filter(ArenaState::isBorrowed)
+                    .map(state -> "竞技场#" + state.getActiveTokenUid() + "(" + state.getBorrower() + ")")
+                    .collect(java.util.stream.Collectors.joining("、"));
+            return ValueResult.failure(
+                    TranslateKeys.Arena.ARENA_MANAGER_NO_FREE_ARENA,
+                    "无空闲竞技场（共 " + maxArenas + " 个），占用者：" + occupants
+            );
+        }
 
         // 更新状态
         ArenaState arenaState = arenaState(freeArenaId);
         arenaState.setBorrowed(true);
+        arenaState.setBorrower(borrower);
+        arenaState.setMatchArea(false);
         Integer tokenUid = nextTokenUid++;
         arenaState.setActiveTokenUid(tokenUid);
         freeCount--;
@@ -144,11 +155,13 @@ public class ArenaManager implements Module {
     }
 
     /**
-     * 凭借据归还一个竞技场世界
+     * 凭借据归还一个竞技场世界<br>
+     * 已登记为比赛区域的借据拒绝手动归还（归还职责在比赛结束流程，见
+     * {@link #markMatchArea(ArenaToken)}）
      *
      * @param token 借据
      *
-     * @return 如果成功归还将返回成功的结果，如果借据无效则返回失败的结果
+     * @return 如果成功归还将返回成功的结果，如果借据无效或已登记为比赛区域则返回失败的结果
      * */
     public @NonNull OperationResult returnArena(@NonNull ArenaToken token) {
         if (!validateToken(token)) return OperationResult.failure(
@@ -156,16 +169,46 @@ public class ArenaManager implements Module {
                 tokenInvalidTechDetail(token)
         );
 
+        ArenaState arenaState = arenaState(token.getArenaId());
+        if (arenaState.isMatchArea()) return OperationResult.failure(
+                null,
+                null,
+                "竞技场 " + token.getArenaId() + " 已登记为比赛区域，由比赛结束流程归还，不能手动归还",
+                null
+        );
+
         // 卸载世界
         unloadArenaWorld(token.getArenaId());
 
         // 更新状态
-        ArenaState arenaState = arenaState(token.getArenaId());
         arenaState.setBorrowed(false);
+        arenaState.setBorrower(null);
         arenaState.setActiveTokenUid(null);
         freeCount++;
 
         return OperationResult.success();
+    }
+
+    /**
+     * 将借据登记为比赛区域：登记后手动归还通道关闭，归还职责移交比赛结束流程
+     * （组件卸载时归还，归还前先经{@link #unmarkMatchArea(ArenaToken)}解除登记）<br>
+     * 双归还防线从句柄层内移至此：不管归还请求来自哪条路径，已登记借据一律被
+     * {@link #returnArena(ArenaToken)}拒绝
+     *
+     * @param token 借据
+     * */
+    public void markMatchArea(@NonNull ArenaToken token) {
+        arenaState(token.getArenaId()).setMatchArea(true);
+    }
+
+    /**
+     * 解除借据的比赛区域登记（归还职责回到手动通道）<br>
+     * 供比赛结束流程在归还前调用；解除后借据可正常归还
+     *
+     * @param token 借据
+     * */
+    public void unmarkMatchArea(@NonNull ArenaToken token) {
+        arenaState(token.getArenaId()).setMatchArea(false);
     }
 
     // ------ 对竞技场的操作 ------
@@ -185,6 +228,35 @@ public class ArenaManager implements Module {
 
         try {
             loadArena(token.getArenaId(), arenaPath);
+        } catch (IOException e) {
+            return OperationResult.failure(
+                    TranslateKeys.Arena.ARENA_MANAGER_IO_EXCEPTION, null, null, e
+            );
+        } catch (ArenaException e) {
+            // 无可上报原因的翻译键：用户消息取异常携带的用户文案，技术性消息取异常文本，兜底文案交给最外层
+            return OperationResult.failure(null, e.getUserMessage(), e.getMessage(), e);
+        }
+        return OperationResult.success();
+    }
+
+    /**
+     * 将指定竞技场数据从包内模板目录加载到竞技场世界中<br>
+     * 与{@link #loadArena(ArenaToken, String)}（插件 jar 内模板）不同，本方法从
+     * 已挂载的包资产目录复制模板（目录形式包为普通目录，zip 形式包为挂载文件系统内的目录）
+     *
+     * @param token       此借据对应的竞技场世界将要承载竞技场数据
+     * @param templateDir 包内世界模板目录（须存在且为目录）
+     *
+     * @return 加载结果
+     * */
+    public @NonNull OperationResult loadArena(@NonNull ArenaToken token, @NonNull Path templateDir) {
+        if (!validateToken(token)) return OperationResult.failure(
+                TranslateKeys.Arena.ARENA_MANAGER_TOKEN_IS_INVALID,
+                tokenInvalidTechDetail(token)
+        );
+
+        try {
+            loadArena(token.getArenaId(), templateDir);
         } catch (IOException e) {
             return OperationResult.failure(
                     TranslateKeys.Arena.ARENA_MANAGER_IO_EXCEPTION, null, null, e
@@ -277,6 +349,46 @@ public class ArenaManager implements Module {
      * @throws ArenaException 竞技场世界目录已存在（拒绝覆盖）时抛出
      * */
     private void loadArena(@NonNull Integer arenaWorldId, @NonNull String arenaPath) throws IOException {
+        Path worldDir = prepareWorldDir(arenaWorldId);
+
+        // 复制竞技场数据
+        JarEntryUtil.copyFromJar(arenaPath, worldDir.toString());
+
+        // 加载世界
+        loadArenaWorld(arenaWorldId);
+    }
+
+    /**
+     * 加载一个竞技场（不是竞技场世界），模板来自包内目录<br>
+     * 生命周期约束与插件 jar 模板路径（{@link #loadArena(Integer, String)}）完全一致
+     *
+     * @param arenaWorldId 要将竞技场加载到的竞技场世界
+     * @param templateDir 包内世界模板目录（可为 zip 挂载文件系统内的目录）
+     *
+     * @throws IOException 复制竞技场数据时出现 IO 错误则抛出
+     * @throws ArenaException 竞技场世界目录已存在（拒绝覆盖）时抛出
+     * */
+    private void loadArena(@NonNull Integer arenaWorldId, @NonNull Path templateDir) throws IOException {
+        Path worldDir = prepareWorldDir(arenaWorldId);
+
+        // 复制竞技场数据
+        copyDirTree(templateDir, worldDir);
+
+        // 加载世界
+        loadArenaWorld(arenaWorldId);
+    }
+
+    /**
+     * 准备竞技场世界目录：已加载的世界先卸载（不保存修改），残留/无关目录拒绝覆盖<br>
+     * 两条模板来源路径（插件 jar / 包资产）共享的加载前置
+     *
+     * @param arenaWorldId 要准备目录的竞技场世界
+     *
+     * @return 已确认不存在的竞技场世界目录（模板数据的复制目标）
+     *
+     * @throws ArenaException 竞技场世界目录已存在（拒绝覆盖）时抛出
+     * */
+    private @NonNull Path prepareWorldDir(@NonNull Integer arenaWorldId) throws ArenaException {
         // 如果该竞技场世界已加载，先卸载（不保存修改，竞技场世界目录随卸载一并删除）
         if (arenaState(arenaWorldId).getLoadedWorld() != null) {
             unloadArenaWorld(arenaWorldId);
@@ -292,12 +404,29 @@ public class ArenaManager implements Module {
             throw new ArenaException(techDetail,
                     Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_DIR_CONFLICT));
         }
+        return worldDir;
+    }
 
-        // 复制竞技场数据
-        JarEntryUtil.copyFromJar(arenaPath, worldName);
-
-        // 加载世界
-        loadArenaWorld(arenaWorldId);
+    /**
+     * 递归复制目录树（源可位于任意已挂载文件系统，含 zip 挂载点）<br>
+     * 目标目录由冲突检查保证不存在，按源相对结构逐级创建
+     *
+     * @param source 源目录
+     * @param target 目标目录（须不存在）
+     *
+     * @throws IOException 任一文件复制失败时抛出
+     * */
+    private static void copyDirTree(@NonNull Path source, @NonNull Path target) throws IOException {
+        try (var paths = Files.walk(source)) {
+            for (Path entry : paths.toList()) {
+                Path dest = target.resolve(source.relativize(entry).toString());
+                if (Files.isDirectory(entry)) {
+                    Files.createDirectories(dest);
+                } else {
+                    Files.copy(entry, dest);
+                }
+            }
+        }
     }
 
     /**

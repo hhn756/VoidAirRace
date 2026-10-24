@@ -10,23 +10,23 @@ public enum PlayState {
     /**
      * 代表玩家目前空闲中，没有参加比赛
      * */
-    FREE(new NamespacedKey(StateSystem.PLAY.getValue(), "free")),
+    FREE(new NamespacedKey(StateSystem.PLAY.getName(), "free")),
 
     /**
      * 代表玩家正在参加比赛
      * */
-    PLAYING(new NamespacedKey(StateSystem.PLAY.getValue(), "playing")),;
+    PLAYING(new NamespacedKey(StateSystem.PLAY.getName(), "playing")),;
 
-    private final NamespacedKey value;
+    private final NamespacedKey id;
 
-    PlayState(NamespacedKey value) {
-        this.value = value;
+    PlayState(NamespacedKey id) {
+        this.id = id;
     }
 
     /**
      * 获取状态名命名空间值
      * */
-    public NamespacedKey getValue() {
-        return value;
+    public NamespacedKey getId() {
+        return id;
     }
 }

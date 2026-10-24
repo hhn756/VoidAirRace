@@ -38,7 +38,7 @@ public class ComponentRegistrar implements Module {
         Logger logger = VoidAirRace.getInstance().getLogger();
         Registry registry = Registry.getInstance();
         // 定义“比赛组件”类别，键计算：注册项所记录的组件类型本身
-        registry.createCategory(Categories.COMPONENT, CompEntry::getCompType);
+        registry.createCategory(Categories.COMPONENT, CompEntry::type);
         DefaultSubtable<CompEntry, Class<MatchComp>> compSubtable =
                 registry.category(Categories.COMPONENT);
 

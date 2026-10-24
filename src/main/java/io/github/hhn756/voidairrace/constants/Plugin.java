@@ -15,12 +15,15 @@ public class Plugin {
     public static final @NonNull String ns = "void_air_race"; // ns: NameSpace
 
     /**
-     * 目前插件的 Lua API 版本号，用户包元文件的{@code api}字段约束的是它<br>
-     * 每当用户包可见的插件 API 发生不兼容变更时递增
+     * 目前插件的 Lua API 版本号，用户包元文件的{@code api}字段约束的是它
      * <p>
-     * 版本记录：2 —— 新增 register("map") 类别与比赛句柄（handle.broadcast/handle.state）
+     * 版本记录：3：文本组件描述符；{@code server.online_players}；{@code player.online} /
+     * {@code player.play_state}；比赛句柄补全加入/结束/比赛时间控制/存活查询/玩家与队伍排行
+     * <p>
+     * 每当用户包可见的插件 API 发生不兼容变更时递增；最小变更单位为一次提交——
+     * 外界收不到的内部重构不递增，同一提交内的多次调整合并为一次递增
      * */
-    public static final int LUA_API_VERSION = 2;
+    public static final int LUA_API_VERSION = 3;
 
     /**
      * @param key 指定键（资源名称/路径），仅允许包含小写英文字母{@code a-z}、数字{@code 0-9}和下划线{@code _}

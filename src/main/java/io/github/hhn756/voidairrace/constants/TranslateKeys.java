@@ -152,6 +152,13 @@ public class TranslateKeys {
         public static final String USER_RULE_ON_ENABLE_FAILED = "void_air_race.match_rule.user_rule.on_enable_failed";
     }
 
+    public static class ResourcePack {
+        private ResourcePack() {}
+        public static final String DECLINED = "void_air_race.resource_pack.declined";
+        public static final String FAILED_APPLY = "void_air_race.resource_pack.failed_apply";
+        public static final String FAILED_DOWNLOAD = "void_air_race.resource_pack.failed_download";
+    }
+
     public static class Team {
         private Team() {}
         public static final String EIGHT_DISPLAY_NAME = "void_air_race.team.eight.display_name";

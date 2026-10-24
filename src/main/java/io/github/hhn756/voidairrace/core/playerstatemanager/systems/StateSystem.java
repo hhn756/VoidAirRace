@@ -6,16 +6,16 @@ package io.github.hhn756.voidairrace.core.playerstatemanager.systems;
 public enum StateSystem {
     PLAY("play");
 
-    private final String value;
+    private final String name;
 
-    StateSystem(String value) {
-        this.value = value;
+    StateSystem(String name) {
+        this.name = name;
     }
 
     /**
      * 获取字符串形式的状态体系名称
      * */
-    public String getValue() {
-        return value;
+    public String getName() {
+        return name;
     }
 }

@@ -115,8 +115,8 @@ public class EventListener implements Listener {
             TeamRoster teamRoster = TeamRoster.getInstance();
             for (Player player : Data.mapWorld.getPlayers()) {
                 // 跳过 不是 空闲状态 的玩家
-                NamespacedKey state = PlayerStateManager.getInstance().getState(player, StateSystem.PLAY.getValue());
-                if (!PlayState.FREE.getValue().equals(state)) continue;
+                NamespacedKey state = PlayerStateManager.getInstance().getState(player, StateSystem.PLAY.getName());
+                if (!PlayState.FREE.getId().equals(state)) continue;
 
                 // 检查 玩家当前加入的队伍 是否是 当前地图 不允许的
                 Teams playerTeam = teamRoster.teamToEnum(teamRoster.getTeam(player));

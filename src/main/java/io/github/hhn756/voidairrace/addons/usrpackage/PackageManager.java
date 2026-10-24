@@ -3,7 +3,7 @@ package io.github.hhn756.voidairrace.addons.usrpackage;
 import io.github.hhn756.voidairrace.VoidAirRace;
 import io.github.hhn756.voidairrace.addons.TagEntry;
 import io.github.hhn756.voidairrace.addons.TagRegistrar;
-import io.github.hhn756.voidairrace.addons.usrpackage.script.PackageScriptService;
+import io.github.hhn756.voidairrace.addons.script.PackageScriptService;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;

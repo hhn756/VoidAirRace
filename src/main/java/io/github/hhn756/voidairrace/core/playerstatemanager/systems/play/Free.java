@@ -1,7 +1,7 @@
 package io.github.hhn756.voidairrace.core.playerstatemanager.systems.play;
 
 import io.github.hhn756.voidairrace.core.match.Match;
-import io.github.hhn756.voidairrace.core.match.basecomponents.contestant.ContestantComp;
+import io.github.hhn756.voidairrace.core.match.component.contestant.ContestantComp;
 import io.github.hhn756.voidairrace.core.playerstatemanager.DefaultState;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerState;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerStateManager;
@@ -23,7 +23,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
  * 代表玩家目前空闲中，没有参加比赛的状态
  * */
 public class Free implements PlayerState, DefaultState, Listener {
-    private static final NamespacedKey stateId = PlayState.FREE.getValue();
+    private static final NamespacedKey stateId = PlayState.FREE.getId();
 
     @Override
     public NamespacedKey getId() {
@@ -50,7 +50,7 @@ public class Free implements PlayerState, DefaultState, Listener {
         PlayerStateManager playerStateManager = PlayerStateManager.getInstance();
         Player player = event.getPlayer();
         if (!playerStateManager.onState(player, stateId)) return;
-        playerStateManager.toggle(player, PlayState.PLAYING.getValue());
+        playerStateManager.toggle(player, PlayState.PLAYING.getId());
     }
 
     @EventHandler
@@ -61,7 +61,7 @@ public class Free implements PlayerState, DefaultState, Listener {
                 .initialContestants()
                 .forEach(contestant -> {
                     if (!PlayerStateManager.getInstance().onState(contestant, stateId)) return;
-                    playerStateManager.toggle(contestant, PlayState.PLAYING.getValue());
+                    playerStateManager.toggle(contestant, PlayState.PLAYING.getId());
                 });
     }
 

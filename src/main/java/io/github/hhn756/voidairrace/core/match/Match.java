@@ -442,11 +442,26 @@ public class Match {
     }
 
     /**
-     * 在lambda中操作比赛记录的指定部分（下称“记录段”），然后自动保存（原子性）比赛记录到文件
+     * 在lambda中访问/操作比赛记录的指定部分（下称“记录段”），然后自动保存（原子性）比赛记录到文件
+     * <p>
+     * 应在一次调用中对记录文件 执行尽量多的操作/一次改好 以避免频繁保存导致的性能问题<br>
+     * 例如：
+     * <pre>{@code
+     *     // 坏
+     *     for (action: actions) {
+     *         call(action)
+     *     }
+     *     // 好
+     *     call(() -> {
+     *         for (action: actions) {
+     *             action.apply()
+     *         }
+     *     })
+     * }</pre>
      *
      * @param module 指定模块
      * @param fn 对模块的记录段的操作<br>
-     *           其接收一个代表模块的记录段的{@link ConfigurationSection}，
+     *           其接收一个代表指定模块记录段的{@link ConfigurationSection}，
      *           该段与内存中的记录树共用同一引用，不存在副本概念，对其读写会直接作用于记录本身<br>
      *           注意：参数受运行时代理管辖，只能在函数体内使用。将参数或其派生对象（子段、
      *           {@code getParent}/{@code getRoot}等）复制留存、在lambda结束后调用，
