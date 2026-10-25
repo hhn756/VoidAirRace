@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.map;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.maps.grassland.GrassLand;
@@ -18,6 +18,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Range;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -26,6 +27,9 @@ public class MapComp extends MatchComp
         implements ConfigurableComp<MapComp.MapECFG, MapComp.MapConfig>,
         StartableComp<CustomData, MapComp.MapSC>,
         EndableComp<CustomData, CustomData> {
+
+    /** 地图逐刻驱动任务；比赛进行期间存在，卸载时取消 */
+    private @Nullable BukkitTask tickTask;
 
     // -------------------- ConfigurableComp --------------------
 
@@ -120,8 +124,12 @@ public class MapComp extends MatchComp
 
         // 注册是 bukkit 事件监听器的地图
         if (gameMap instanceof Listener listener) {
-            Bukkit.getPluginManager().registerEvents(listener, VoidAirRace.getInstance());
+            Bukkit.getPluginManager().registerEvents(listener, Voidairrace.getInstance());
         }
+
+        // 逐刻驱动地图：位置轮询、计时等连续逻辑走这里，不塞进事件词表
+        tickTask = Bukkit.getScheduler().runTaskTimer(
+                Voidairrace.getInstance(), () -> gameMap.tick(match), 0L, 1L);
 
         return ValueResult.success(new MapSC(gameMap));
     }
@@ -138,6 +146,11 @@ public class MapComp extends MatchComp
             @NonNull Match match,
             @Nullable CustomData endArg) {
         PlayableGameMap gameMap = match.config().dataOf(MapComp.CONFIG_KEY).map();
+        // 先停逐刻驱动，再走地图收尾
+        if (tickTask != null) {
+            tickTask.cancel();
+            tickTask = null;
+        }
         gameMap.over(match);
         if (gameMap instanceof Listener listener) {
             HandlerList.unregisterAll(listener);

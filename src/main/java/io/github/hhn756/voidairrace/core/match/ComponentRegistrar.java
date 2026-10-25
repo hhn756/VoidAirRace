@@ -1,13 +1,15 @@
 package io.github.hhn756.voidairrace.core.match;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.Categories;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
 import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
@@ -35,7 +37,7 @@ public class ComponentRegistrar implements Module {
      * 添加“比赛组件”注册项类别，然后扫描并注册插件中所有比赛组件实现类
      */
     private void registerComponents() {
-        Logger logger = VoidAirRace.getInstance().getLogger();
+        Logger logger = Voidairrace.getInstance().getLogger();
         Registry registry = Registry.getInstance();
         // 定义“比赛组件”类别，键计算：注册项所记录的组件类型本身
         registry.createCategory(Categories.COMPONENT, CompEntry::type);
@@ -49,13 +51,14 @@ public class ComponentRegistrar implements Module {
                 CompEntry entry = new CompEntry(componentClass);
                 OperationResult addResult = compSubtable.add(entry);
                 if (!addResult.isSuccess()) {
-                    logger.warning("注册比赛组件 “" + componentClass.getName() + "” 失败："
-                            + addResult.techMessage() + "！这可能是开发者的疏忽");
+                    logger.warning(ServerLanguageService.translate(
+                            TranslateKeys.Log.COMPONENT_REGISTRAR_REGISTER_FAILED_WITH_REASON,
+                            componentClass.getName(), addResult.techMessage()));
                 }
             } catch (NoSuchMethodException e) {
-                logger.warning("注册比赛组件 “"
-                        + componentClass.getName()
-                        + "” 失败，此组件类型没有公开的无参构造器！这可能是开发者的疏忽");
+                logger.warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.COMPONENT_REGISTRAR_REGISTER_FAILED_NO_DEFAULT_CONSTRUCTOR,
+                        componentClass.getName()));
             }
         }
     }

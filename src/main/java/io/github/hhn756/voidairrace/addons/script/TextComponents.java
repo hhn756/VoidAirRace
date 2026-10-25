@@ -1,5 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script;
 
+import io.github.hhn756.voidairrace.addons.script.simplevalue.NamespaceKey;
 import io.github.hhn756.voidairrace.infrastructure.util.lua.ApiArgs;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.*;
@@ -39,7 +40,7 @@ import java.util.Locale;
  *       Lua 表可自引用，无上限将栈溢出）</li>
  * </ul>
  * 简字符串快捷路径：接收点参数直接给字符串 = 纯文本组件。
- * 校验失败抛 Lua 错误（响亮失败），错误消息携带嵌套路径（{@code what} 参数）
+ * 校验失败抛 Lua 错误，错误消息携带嵌套路径（{@code what} 参数）
  * */
 public final class TextComponents {
     /** 描述符嵌套深度上限：防 Lua 表自引用导致 Java 栈溢出 */
@@ -98,7 +99,7 @@ public final class TextComponents {
         if (depth >= MAX_DEPTH) {
             throw new LuaRuntimeException(what + "：文本组件描述符嵌套过深（上限 " + MAX_DEPTH + "）");
         }
-        String type = optStringField(table, "type", what);
+        String type = ApiArgs.optStringField(table, "type", what);
         Component component = switch (type == null ? "text" : type) {
             case "text" -> buildText(table, what);
             case "translatable" -> buildTranslatable(table, what, depth);
@@ -119,7 +120,7 @@ public final class TextComponents {
 
     /** text：字段 {@code text}（可选，缺省空文本）；存在但非字符串即抛错 */
     private static @NonNull Component buildText(@NonNull Table table, @NonNull String what) {
-        String text = optStringField(table, "text", what);
+        String text = ApiArgs.optStringField(table, "text", what);
         return text == null ? Component.empty() : Component.text(text);
     }
 
@@ -128,36 +129,34 @@ public final class TextComponents {
      * {@code args} 为数组，每项可嵌套任意描述符（Adventure 原生支持组件参数）
      * */
     private static @NonNull Component buildTranslatable(@NonNull Table table, @NonNull String what, int depth) {
-        String translate = requireStringField(table, "translate", what);
-        String fallback = optStringField(table, "fallback", what);
+        String translate = ApiArgs.expectStringField(table, "translate", what);
+        String fallback = ApiArgs.optStringField(table, "fallback", what);
         Object rawArgs = table.rawget(ByteString.of("args"));
         List<Component> args = rawArgs == null
                 ? List.of()
                 : listFromLua(rawArgs, what + "的字段 “args”");
-        var builder = fallback == null
+        var component = fallback == null
                 ? Component.translatable(translate)
                 : Component.translatable(translate, fallback);
-        return args.isEmpty() ? builder : builder.args(args);
+        return args.isEmpty() ? component : component.arguments(args);
     }
 
     /** keybind：{@code keybind} 必填（按键绑定标识，如 {@code key.jump}） */
     private static @NonNull Component buildKeybind(@NonNull Table table, @NonNull String what) {
-        return Component.keybind(requireStringField(table, "keybind", what));
+        return Component.keybind(ApiArgs.expectStringField(table, "keybind", what));
     }
 
-    /** score：{@code objective} 必填；{@code name} 缺省空串（= 读者自身的记分板项）；{@code value} 可选 */
+    /** score：{@code objective} 必填；{@code name} 缺省空串（= 读者自身的记分板项） */
     private static @NonNull Component buildScore(@NonNull Table table, @NonNull String what) {
-        String objective = requireStringField(table, "objective", what);
-        String name = optStringField(table, "name", what);
-        String value = optStringField(table, "value", what);
-        var builder = Component.score(name == null ? "" : name, objective);
-        return value == null ? builder : builder.value(value);
+        String objective = ApiArgs.expectStringField(table, "objective", what);
+        String name = ApiArgs.optStringField(table, "name", what);
+        return Component.score(name == null ? "" : name, objective);
     }
 
     /** selector：{@code selector} 必填（实体选择器，如 {@code @p}）；{@code separator} 可选 */
     private static @NonNull Component buildSelector(@NonNull Table table, @NonNull String what) {
-        String selector = requireStringField(table, "selector", what);
-        String separator = optStringField(table, "separator", what);
+        String selector = ApiArgs.expectStringField(table, "selector", what);
+        String separator = ApiArgs.optStringField(table, "separator", what);
         return separator == null ? Component.selector(selector) : Component.selector(selector, Component.text(separator));
     }
 
@@ -167,12 +166,12 @@ public final class TextComponents {
      * {@code interpret} / {@code separator} 可选
      * */
     private static @NonNull Component buildNbt(@NonNull Table table, @NonNull String what) {
-        String block = optStringField(table, "block", what);
-        String entity = optStringField(table, "entity", what);
-        String storage = optStringField(table, "storage", what);
-        String nbtPath = requireStringField(table, "nbt", what);
+        String block = ApiArgs.optStringField(table, "block", what);
+        String entity = ApiArgs.optStringField(table, "entity", what);
+        String storage = ApiArgs.optStringField(table, "storage", what);
+        String nbtPath = ApiArgs.expectStringField(table, "nbt", what);
         boolean interpret = table.rawget(ByteString.of("interpret")) != null;
-        String separator = optStringField(table, "separator", what);
+        String separator = ApiArgs.optStringField(table, "separator", what);
         Component separatorComponent = separator == null ? null : Component.text(separator);
 
         int sources = (block != null ? 1 : 0) + (entity != null ? 1 : 0) + (storage != null ? 1 : 0);
@@ -193,12 +192,7 @@ public final class TextComponents {
             EntityNBTComponent component = Component.entityNBT(entity, nbtPath).interpret(interpret);
             return separatorComponent == null ? component : component.separator(separatorComponent);
         }
-        Key storageKey;
-        try {
-            storageKey = Key.key(storage);
-        } catch (Exception e) {
-            throw new LuaRuntimeException(what + "的字段 “storage” 非法：" + storage + "（" + e.getMessage() + "）");
-        }
+        Key storageKey = NamespaceKey.expect(storage, what + "的字段 “storage”");
         StorageNBTComponent component = Component.storageNBT(nbtPath, storageKey).interpret(interpret);
         return separatorComponent == null ? component : component.separator(separatorComponent);
     }
@@ -211,7 +205,7 @@ public final class TextComponents {
      * */
     private static @NonNull Component applyStyle(
             @NonNull Component component, @NonNull Table table, @NonNull String what) {
-        String colorName = optStringField(table, "color", what);
+        String colorName = ApiArgs.optStringField(table, "color", what);
         if (colorName != null) {
             TextColor color = parseColor(colorName, what);
             component = component.color(color);
@@ -221,15 +215,9 @@ public final class TextComponents {
         component = applyDecoration(component, table, "underlined", TextDecoration.UNDERLINED, what);
         component = applyDecoration(component, table, "strikethrough", TextDecoration.STRIKETHROUGH, what);
         component = applyDecoration(component, table, "obfuscated", TextDecoration.OBFUSCATED, what);
-        String font = optStringField(table, "font", what);
-        if (font != null) {
-            try {
-                component = component.font(Key.key(font));
-            } catch (Exception e) {
-                throw new LuaRuntimeException(what + "的字段 “font” 非法：\"" + font + "”（" + e.getMessage() + "）");
-            }
-        }
-        String insertion = optStringField(table, "insertion", what);
+        String font = ApiArgs.optStringField(table, "font", what);
+        if (font != null) component = component.font(NamespaceKey.expect(font, what + "的字段 “font”"));
+        String insertion = ApiArgs.optStringField(table, "insertion", what);
         if (insertion != null) component = component.insertion(insertion);
         return component;
     }
@@ -267,7 +255,7 @@ public final class TextComponents {
         if (!(raw instanceof Table event)) {
             throw new LuaRuntimeException(what + "的字段 “click_event” 必须是表");
         }
-        String action = requireStringField(event, "action", what + "的字段 “click_event”");
+        String action = ApiArgs.expectStringField(event, "action", what + "的字段 “click_event”");
         String path = what + "的字段 “click_event”";
         ClickEvent click = switch (action) {
             case "open_url" -> ClickEvent.openUrl(
@@ -310,28 +298,28 @@ public final class TextComponents {
             throw new LuaRuntimeException(what + "的字段 “hover_event” 必须是表");
         }
         String path = what + "的字段 “hover_event”";
-        String action = requireStringField(event, "action", path);
+        String action = ApiArgs.expectStringField(event, "action", path);
         HoverEvent<?> hover = switch (action) {
             case "show_text" -> HoverEvent.showText(
                     fromLua(event.rawget(ByteString.of("value")), path + "的字段 “value”"));
             case "show_item" -> {
-                String id = requireStringField(event, "id", path);
+                Key id = NamespaceKey.expect(ApiArgs.expectStringField(event, "id", path), path + "的字段 “id”");
                 Object rawCount = event.rawget(ByteString.of("count"));
                 if (rawCount == null) {
-                    yield HoverEvent.showItem(Key.key(id), 1);
+                    yield HoverEvent.showItem(id, 1);
                 }
                 long count = optPositiveLong(event, "count", path);
-                yield HoverEvent.showItem(Key.key(id), (int) count);
+                yield HoverEvent.showItem(id, (int) count);
             }
             case "show_entity" -> {
-                String type = requireStringField(event, "type", path);
-                String id = requireStringField(event, "id", path);
+                Key type = NamespaceKey.expect(ApiArgs.expectStringField(event, "type", path), path + "的字段 “type”");
+                String id = ApiArgs.expectStringField(event, "id", path);
                 Object rawName = event.rawget(ByteString.of("name"));
                 Component name = rawName == null
                         ? null
                         : fromLua(rawName, path + "的字段 “name”");
                 yield HoverEvent.showEntity(HoverEvent.ShowEntity.showEntity(
-                        Key.key(type), java.util.UUID.fromString(id), name));
+                        type, java.util.UUID.fromString(id), name));
             }
             default -> throw new LuaRuntimeException(path + "的字段 “action” 非法：\"" + action
                     + "\"（可用：show_text / show_item / show_entity）");
@@ -349,25 +337,6 @@ public final class TextComponents {
     }
 
     // ------ 字段读取 ------
-
-    /** 读取可选字符串字段：缺省返回 null；存在但非字符串即抛错 */
-    private static @Nullable String optStringField(@NonNull Table table, @NonNull String field, @NonNull String what) {
-        Object value = table.rawget(ByteString.of(field));
-        if (value == null) return null;
-        if (!(value instanceof ByteString bs)) {
-            throw new LuaRuntimeException(what + "的字段 \"" + field + "\" 必须是字符串");
-        }
-        return bs.decode();
-    }
-
-    /** 读取必填字符串字段：缺省或非字符串即抛错 */
-    private static @NonNull String requireStringField(@NonNull Table table, @NonNull String field, @NonNull String what) {
-        String value = optStringField(table, field, what);
-        if (value == null) {
-            throw new LuaRuntimeException(what + "的字段 \"" + field + "\" 必填");
-        }
-        return value;
-    }
 
     /** 读取必填正整数字段：缺省、非整数或小于 1 即抛错（click_event 的 change_page 用） */
     private static long optPositiveLong(@NonNull Table table, @NonNull String field, @NonNull String what) {

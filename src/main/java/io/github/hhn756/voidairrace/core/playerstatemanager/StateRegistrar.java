@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.playerstatemanager;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
@@ -55,7 +55,7 @@ public class StateRegistrar implements Module {
      * 扫描并注册所有状态体系和状态类（实现 {@link PlayerState} 的类）
      */
     private void registerSystemsAndStates() {
-        VoidAirRace mainClass = VoidAirRace.getInstance();
+        Voidairrace mainClass = Voidairrace.getInstance();
         DefaultSubtable<StateSystemEntry, String> stateSystems = Registry.getInstance()
                 .createCategory(Categories.STATESYSTEM, StateSystemEntry::getSystemId);
 
@@ -100,7 +100,7 @@ public class StateRegistrar implements Module {
     private void registerStates(
             @NonNull List<@NonNull PlayerState> states,
             @NonNull DefaultSubtable<@NonNull StateSystemEntry, @NonNull String> stateSystems,
-            @NonNull VoidAirRace mainClass) {
+            @NonNull Voidairrace mainClass) {
         for (PlayerState state : states) {
             NamespacedKey stateId = state.getId();
             StateSystemEntry system = stateSystems.get(stateId.getNamespace());

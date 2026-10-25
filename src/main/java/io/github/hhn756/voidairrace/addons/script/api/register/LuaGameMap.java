@@ -1,7 +1,8 @@
 package io.github.hhn756.voidairrace.addons.script.api.register;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
+import io.github.hhn756.voidairrace.addons.script.MutationAccess;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
 import io.github.hhn756.voidairrace.addons.script.api.handle.HandleApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
@@ -12,6 +13,7 @@ import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.exception.RegistryException;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.load.ChunkClassLoader;
 import net.sandius.rembulan.runtime.LuaFunction;
@@ -48,7 +50,7 @@ final class LuaGameMap extends PlayableGameMap {
     private final @NonNull StateContext stateContext;
     /** 编译产物类加载器，供调用门生成 Lua 风格调用栈 */
     private final @NonNull ChunkClassLoader chunkClassLoader;
-    /** 发起注册的包（比赛句柄的命名空间白名单裁定基准） */
+    /** 发起注册的包（比赛句柄的命名空间白名单与比赛内资源修改权的裁定基准） */
     private final @NonNull UsrPackage pkg;
     /** 日志与错误消息中的归属描述（包Id:地图键名） */
     private final @NonNull String owner;
@@ -124,6 +126,8 @@ final class LuaGameMap extends PlayableGameMap {
         this.chunkClassLoader = chunkClassLoader;
         this.pkg = pkg;
         this.owner = owner;
+        // 登记归属：比赛内资源修改权（玩家等）以注册包为准，见 MutationAccess
+        MutationAccess.registerMap(this, pkg);
     }
 
     @Override
@@ -149,8 +153,9 @@ final class LuaGameMap extends PlayableGameMap {
                 stateContext, chunkClassLoader, onOverFn, HandleApi.forEndingMatch(stateContext, match, pkg));
         if (!result.hasValue()) {
             // 收尾阶段失败只记日志，不阻断比赛结束流程（对齐规则 on_disable 的处理）
-            VoidAirRace.getInstance().getLogger().warning(
-                    "用户地图 on_over 调用失败：" + owner + "（" + result.techMessage() + "）"
+            Voidairrace.getInstance().getLogger().warning(
+                    ServerLanguageService.translate(
+                            TranslateKeys.Log.LUA_MAP_ON_OVER_FAILED, owner, result.techMessage())
             );
         }
         return OperationResult.success();

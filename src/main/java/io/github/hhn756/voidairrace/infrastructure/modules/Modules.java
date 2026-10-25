@@ -1,7 +1,9 @@
 package io.github.hhn756.voidairrace.infrastructure.modules;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.Bukkit;
@@ -29,7 +31,7 @@ import java.util.logging.Logger;
  * 供非模块代码获取普通模块单例的方法是 {@link #getModule(Class)}
  *
  * <p>除引导方法依赖 Paper 引导 API（{@code BootstrapContext} / {@code ComponentLogger}）外，
- * 其余部分只依赖 Java 标准库与 {@code VoidAirRace.getInstance().getLogger()}
+ * 其余部分只依赖 Java 标准库与 {@code Voidairrace.getInstance().getLogger()}
  * */
 public final class Modules {
     /**
@@ -74,7 +76,8 @@ public final class Modules {
         // 扫描所有实现了 BootstrapStage 的类
         Collection<Class<BootstrapStage>> stageClasses = ClassScanner.scanSubclasses(
                 classLoader, codeSourceUrl, BootstrapStage.class, "io.github.hhn756.voidairrace");
-        logger.debug("共扫描到 {} 个 BootstrapStage 实现：", stageClasses.size());
+        logger.debug(ServerLanguageService.translate(
+                TranslateKeys.Log.MODULES_BOOTSTRAP_SCAN_COUNT, stageClasses.size()));
         for (Class<BootstrapStage> stageClass : stageClasses) {
             logger.debug(stageClass.getName());
         }
@@ -84,9 +87,11 @@ public final class Modules {
             try {
                 BootstrapStage stage = createInstance(stageClass);
                 stage.onBootstrap(context);
-                logger.debug("BootstrapStage {} 执行完成", stageClass.getSimpleName());
+                logger.debug(ServerLanguageService.translate(
+                        TranslateKeys.Log.MODULES_BOOTSTRAP_STAGE_FINISHED, stageClass.getSimpleName()));
             } catch (Exception e) {
-                logger.error("引导阶段任务 {} 执行失败", stageClass.getName(), e);
+                logger.error(ServerLanguageService.translate(
+                        TranslateKeys.Log.MODULES_BOOTSTRAP_STAGE_FAILED, stageClass.getName()), e);
             }
         }
     }
@@ -104,7 +109,8 @@ public final class Modules {
         if (!INSTANCES.isEmpty()) throw new IllegalStateException("模块已加载，不能在同一次插件启用中重复加载");
 
         declaredModules = List.copyOf(modules);
-        logger().fine("模块加载器：本次启用声明 " + declaredModules.size() + " 个模块");
+        logger().fine(ServerLanguageService.translate(
+                TranslateKeys.Log.MODULES_DECLARED_COUNT, declaredModules.size()));
 
         List<Class<? extends Module>> order;
         try {
@@ -131,20 +137,24 @@ public final class Modules {
             try {
                 invoke(moduleClass, "onLoad");
             } catch (Throwable failure) {
-                logger().severe("模块 " + display(moduleClass) + " 的 onLoad 执行失败，开始回滚 " + LOADED.size() + " 个已加载模块");
+                logger().severe(ServerLanguageService.translate(
+                        TranslateKeys.Log.MODULES_LOAD_FAILED_ROLLBACK, display(moduleClass), LOADED.size()));
                 rollback();
                 throw new IllegalStateException("模块 " + display(moduleClass) + " 加载失败，已回滚全部模块", failure);
             }
             try {
                 registerListeners(moduleClass);
             } catch (Throwable failure) {
-                logger().severe("模块 " + display(moduleClass) + " 的事件监听器注册失败，开始回滚 " + LOADED.size() + " 个已加载模块");
+                logger().severe(ServerLanguageService.translate(
+                        TranslateKeys.Log.MODULES_LISTENER_REGISTRATION_FAILED_ROLLBACK,
+                        display(moduleClass), LOADED.size()));
                 rollback();
                 throw new IllegalStateException("模块 " + display(moduleClass) + " 加载失败（事件监听器注册失败），已回滚全部模块", failure);
             }
         }
 
-        logger().fine("模块加载器：全部 " + LOADED.size() + " 个模块加载完成");
+        logger().fine(ServerLanguageService.translate(
+                TranslateKeys.Log.MODULES_ALL_LOADED, LOADED.size()));
     }
 
     /**
@@ -158,7 +168,8 @@ public final class Modules {
             return;
         }
 
-        logger().fine("模块卸载器：按加载逆序卸载 " + LOADED.size() + " 个模块");
+        logger().fine(ServerLanguageService.translate(
+                TranslateKeys.Log.MODULES_UNLOADING, LOADED.size()));
         List<Class<? extends Module>> snapshot = new ArrayList<>(LOADED);
         for (int i = snapshot.size() - 1; i >= 0; i--) {
             Class<? extends Module> moduleClass = snapshot.get(i);
@@ -166,7 +177,8 @@ public final class Modules {
             try {
                 invoke(moduleClass, "onUnload");
             } catch (Throwable failure) {
-                logger().warning("模块 " + display(moduleClass) + " 的 onUnload 执行失败，已跳过并继续卸载其他模块：" + failure);
+                logger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.MODULES_UNLOAD_FAILED_SKIPPED, display(moduleClass), failure));
             }
         }
 
@@ -217,7 +229,8 @@ public final class Modules {
 
             Set<Class<? extends Module>> required = new LinkedHashSet<>();
             if (declared == null) {
-                logger().warning("模块 " + display(moduleClass) + " 的 getRequiredModules 返回 null，按无前置处理");
+                logger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.MODULES_REQUIRED_MODULES_NULL, display(moduleClass)));
             } else {
                 for (Class<? extends Module> prerequisite : declared) {
                     if (prerequisite == null) {
@@ -421,7 +434,8 @@ public final class Modules {
             try {
                 invoke(moduleClass, "onUnload");
             } catch (Throwable failure) {
-                logger().warning("回滚时模块 " + display(moduleClass) + " 的 onUnload 执行失败，继续回滚：" + failure);
+                logger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.MODULES_ROLLBACK_UNLOAD_FAILED, display(moduleClass), failure));
             }
         }
         resetState();
@@ -456,7 +470,8 @@ public final class Modules {
             throw new IllegalStateException("模块 " + display(moduleClass) + " 的 getListeners 执行失败", failure);
         }
         if (declared == null) {
-            logger().warning("模块 " + display(moduleClass) + " 的 getListeners 返回 null，按无监听器处理");
+            logger().warning(ServerLanguageService.translate(
+                    TranslateKeys.Log.MODULES_LISTENERS_NULL, display(moduleClass)));
             return;
         }
 
@@ -467,14 +482,15 @@ public final class Modules {
                 throw new IllegalStateException("模块 " + display(moduleClass) + " 的 getListeners 返回集合包含 null");
             }
             try {
-                Bukkit.getPluginManager().registerEvents(listener, VoidAirRace.getInstance());
+                Bukkit.getPluginManager().registerEvents(listener, Voidairrace.getInstance());
             } catch (Throwable failure) {
                 throw new IllegalStateException("模块 " + display(moduleClass) + " 的事件监听器注册失败："
                         + listener.getClass().getName(), failure);
             }
             registered.add(listener);
         }
-        logger().fine("模块 " + display(moduleClass) + " 注册了 " + registered.size() + " 个事件监听器");
+        logger().fine(ServerLanguageService.translate(
+                TranslateKeys.Log.MODULES_LISTENERS_REGISTERED, display(moduleClass), registered.size()));
     }
 
     /**
@@ -486,7 +502,8 @@ public final class Modules {
         for (Listener listener : registered) {
             HandlerList.unregisterAll(listener);
         }
-        logger().fine("模块 " + display(moduleClass) + " 反注册了 " + registered.size() + " 个事件监听器");
+        logger().fine(ServerLanguageService.translate(
+                TranslateKeys.Log.MODULES_LISTENERS_UNREGISTERED, display(moduleClass), registered.size()));
     }
 
     private static String describeClasses(Collection<? extends Class<?>> classes) {
@@ -508,6 +525,6 @@ public final class Modules {
      * 本框架唯一允许使用的日志入口：插件级 {@link java.util.logging.Logger}
      * */
     private static Logger logger() {
-        return VoidAirRace.getInstance().getLogger();
+        return Voidairrace.getInstance().getLogger();
     }
 }

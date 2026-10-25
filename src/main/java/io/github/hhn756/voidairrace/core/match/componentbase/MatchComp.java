@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.match.componentbase;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
@@ -21,7 +21,7 @@ import java.util.List;
  * */
 public class MatchComp {
     private static final @NonNull GameElementMeta defaultMeta = new GameElementMeta(
-            new NamespacedKey(VoidAirRace.getInstance(), "default_component"),
+            new NamespacedKey(Voidairrace.getInstance(), "default_component"),
             List.of(Component.translatable(TranslateKeys.MatchComp.COMP_BASE_DEFAULT_NAME)),
             List.of(), List.of(), Component.empty(), 0L, List.of(), List.of()
     );

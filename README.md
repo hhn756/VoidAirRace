@@ -23,7 +23,7 @@
 
 Rembulan 与 ASM 的许可证全文分别见 [libs/rembulan/LICENSE.txt](libs/rembulan/LICENSE.txt) 与 [libs/asm/LICENSE.txt](libs/asm/LICENSE.txt)。
 
-打包发布时，上述许可证文本会随构建进入发布 jar 的 `META-INF/`（`LICENSE-VOIDAIRRACE.txt`、`LICENSE-Rembulan.txt`、`LICENSE-ASM.txt`）。
+打包发布时，上述许可证文本会随构建进入发布 jar 的 `META-INF/`（`LICENSE-Voidairrace.txt`、`LICENSE-Rembulan.txt`、`LICENSE-ASM.txt`）。
 
 ### 构建工具
 

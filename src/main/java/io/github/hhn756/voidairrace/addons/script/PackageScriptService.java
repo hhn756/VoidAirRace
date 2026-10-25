@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.script.api.PackageRequire;
 import io.github.hhn756.voidairrace.addons.script.api.PluginApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
@@ -64,7 +64,7 @@ public class PackageScriptService implements Module {
 
     /** 用户脚本编译加载器：编译产物为 JVM 类，类名以固定前缀加自增序号保证唯一（chunk 名只是定位报错的标签） */
     private final @NonNull CompilerChunkLoader chunkLoader =
-            CompilerChunkLoader.of(PackageScriptService.class.getClassLoader(), "voidairrace_user_script");
+            CompilerChunkLoader.of(PackageScriptService.class.getClassLoader(), "Voidairrace_user_script");
 
     @Override
     public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
@@ -207,7 +207,7 @@ public class PackageScriptService implements Module {
      * 文件系统能力虽在此抽象中存在，但对应的标准库（io、os、dofile、loadfile）不会暴露给脚本
      * */
     private @NonNull RuntimeEnvironment standardStreams() {
-        Logger logger = VoidAirRace.getInstance().getLogger();
+        Logger logger = Voidairrace.getInstance().getLogger();
         return RuntimeEnvironments.system(InputStream.nullInputStream(), new LogOutputStream(logger), new LogOutputStream(logger));
     }
 }

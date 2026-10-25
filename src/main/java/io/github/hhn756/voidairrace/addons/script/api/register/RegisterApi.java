@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script.api.register;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.addons.TagEntry;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
@@ -8,12 +8,14 @@ import io.github.hhn756.voidairrace.addons.script.TextComponents;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.Plugin;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.matchrule.RuleEntry;
 import io.github.hhn756.voidairrace.exception.RegistryException;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.result.OperationResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.LuaRuntimeException;
 import net.sandius.rembulan.StateContext;
@@ -139,7 +141,8 @@ public final class RegisterApi {
         if (!addResult.isSuccess()) {
             throw new LuaRuntimeException("地图 id 已被注册：" + mapId);
         }
-        VoidAirRace.getInstance().getLogger().info("用户包 " + pkg.id() + " 注册地图：" + mapId);
+        Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+                TranslateKeys.Log.REGISTER_API_MAP_REGISTERED, pkg.id(), mapId));
     }
 
     /**
@@ -197,7 +200,8 @@ public final class RegisterApi {
         if (!addResult.isSuccess()) {
             throw new LuaRuntimeException("规则 id 已被注册：" + ruleId);
         }
-        VoidAirRace.getInstance().getLogger().info("用户包 " + pkg.id() + " 注册比赛规则：" + ruleId);
+        Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+                TranslateKeys.Log.REGISTER_API_RULE_REGISTERED, pkg.id(), ruleId));
     }
 
     /**
@@ -228,7 +232,8 @@ public final class RegisterApi {
         if (!addResult.isSuccess()) {
             throw new LuaRuntimeException("标签 id 已被注册：" + tagId);
         }
-        VoidAirRace.getInstance().getLogger().info("用户包 " + pkg.id() + " 注册标签：" + tagId);
+        Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+                TranslateKeys.Log.REGISTER_API_TAG_REGISTERED, pkg.id(), tagId));
     }
 
     /**

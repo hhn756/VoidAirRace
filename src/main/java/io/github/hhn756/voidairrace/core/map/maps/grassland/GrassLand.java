@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.map.maps.grassland;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
@@ -21,6 +21,7 @@ import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
 import io.github.hhn756.voidairrace.service.arena.ArenaToken;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import io.papermc.paper.event.player.PlayerFailMoveEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -165,8 +166,9 @@ public class GrassLand extends PlayableGameMap implements Listener {
                 // 技术性消息只进日志
                 String techMessage = enableRuleResult.techMessage();
                 if (techMessage != null) {
-                    VoidAirRace.getInstance().getLogger()
-                            .warning("草地地图启用比赛规则 " + ruleId + " 失败：" + techMessage);
+                    Voidairrace.getInstance().getLogger()
+                            .warning(ServerLanguageService.translate(
+                                    TranslateKeys.Log.GRASS_LAND_ENABLE_RULE_FAILED, ruleId, techMessage));
                 }
             }
         }

@@ -1,5 +1,5 @@
-name: VoidAirRace
+name: Voidairrace
 version: '0.1'
-main: io.github.hhn756.voidairrace.VoidAirRace
+main: io.github.hhn756.voidairrace.Voidairrace
 bootstrapper: io.github.hhn756.voidairrace.Bootstrap
 api-version: '1.21.11'

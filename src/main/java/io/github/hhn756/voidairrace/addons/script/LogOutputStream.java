@@ -1,5 +1,7 @@
 package io.github.hhn756.voidairrace.addons.script;
 
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.jspecify.annotations.NonNull;
 
 import java.io.ByteArrayOutputStream;
@@ -35,7 +37,8 @@ public final class LogOutputStream extends OutputStream {
 
     private void flushLine() {
         if (buffer.size() == 0) return;
-        logger.info("[用户包脚本] " + buffer.toString(StandardCharsets.UTF_8));
+        logger.info(ServerLanguageService.translate(
+                TranslateKeys.Log.SCRIPT_OUTPUT, buffer.toString(StandardCharsets.UTF_8)));
         buffer.reset();
     }
 }

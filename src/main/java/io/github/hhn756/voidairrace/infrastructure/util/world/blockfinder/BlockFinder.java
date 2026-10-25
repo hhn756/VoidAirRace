@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -34,7 +34,7 @@ public class BlockFinder implements Module {
 
     /** 插件启用时执行 */
     private void onLoad() {
-        plugin = VoidAirRace.getInstance();
+        plugin = Voidairrace.getInstance();
     }
 
     /**

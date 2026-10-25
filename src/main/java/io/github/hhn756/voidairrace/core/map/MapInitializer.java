@@ -1,7 +1,8 @@
 package io.github.hhn756.voidairrace.core.map;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.Categories;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
@@ -9,6 +10,7 @@ import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder.BlockFinder;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -29,7 +31,7 @@ public class MapInitializer implements Module {
 
     // ------
 
-    private @NonNull VoidAirRace mainClass;
+    private @NonNull Voidairrace mainClass;
     private @NonNull YamlConfig flagConfig;
     private @NonNull Logger logger;
 
@@ -47,7 +49,7 @@ public class MapInitializer implements Module {
      * */
     private void onLoad() {
         flagConfig = Config.getInstance().getYmlConfig(PublicFile.FLAG);
-        mainClass = VoidAirRace.getInstance();
+        mainClass = Voidairrace.getInstance();
         logger = mainClass.getLogger();
 
         instance = this;
@@ -82,7 +84,8 @@ public class MapInitializer implements Module {
             chain = chain.thenCompose(ignored -> initOneMap(mapId));
         }
 
-        chain.thenRun(() -> logger.fine("所有地图初始化流程结束"));
+        chain.thenRun(() -> logger.fine(
+                ServerLanguageService.translate(TranslateKeys.Log.MAP_INITIALIZER_ALL_FINISHED)));
     }
 
     /**
@@ -122,14 +125,16 @@ public class MapInitializer implements Module {
             return mapInst.initAsync(mainClass)
                     .thenRunAsync(() -> {
                                 setInitFlag(mapId, true);
-                                logger.fine("地图 " + mapId + " 初始化完成");
+                                logger.fine(ServerLanguageService.translate(
+                                        TranslateKeys.Log.MAP_INITIALIZER_MAP_FINISHED, mapId));
                             },
                             SchedulingUtil::runOnMainThread
                     )
                     .exceptionally(throwable -> {
                         logger.log(
                                 Level.SEVERE,
-                                "地图 " + mapId + " 初始化失败: " + throwable.getMessage(),
+                                ServerLanguageService.translate(
+                                        TranslateKeys.Log.MAP_INITIALIZER_MAP_FAILED, mapId, throwable.getMessage()),
                                 throwable);
                         // 失败时不设置标志，下次重启或手动重试会再次尝试
                         return null;

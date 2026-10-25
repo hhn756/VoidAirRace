@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script.api;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.script.api.handle.ArenaHandle;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.event.UsrPackageUnloadEvent;
@@ -55,7 +55,7 @@ public final class ArenaApi {
         this.pkg = pkg;
         this.stateContext = stateContext;
         this.packageResolver = packageResolver;
-        Bukkit.getPluginManager().registerEvents(new UnloadListener(), VoidAirRace.getInstance());
+        Bukkit.getPluginManager().registerEvents(new UnloadListener(), Voidairrace.getInstance());
     }
 
     /**

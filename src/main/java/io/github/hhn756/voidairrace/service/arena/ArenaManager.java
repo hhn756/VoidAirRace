@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.service.arena;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.exception.ArenaException;
@@ -14,6 +14,7 @@ import io.github.hhn756.voidairrace.infrastructure.util.JarEntryUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.WorldCreatorUtil;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -58,13 +59,14 @@ public class ArenaManager implements Module {
      * 读取配置等有副作用的工作必须在此完成：Modules 会先实例化全部模块，再按拓扑顺序加载
      * */
     private void onLoad() {
-        VoidAirRace mainClass = VoidAirRace.getInstance();
+        Voidairrace mainClass = Voidairrace.getInstance();
 
         // 读取最大竞技场数量，若配置项不存在或无效则使用默认值
         YamlConfig gameSettings = Config.getInstance().getYmlConfig(PublicFile.GAME_SETTING);
         this.maxArenas = gameSettings.get(GameSettingKey.MAX_ARENAS, 16);
         if (maxArenas < 1) {
-            mainClass.getLogger().warning("配置中的最大竞技场数量小于 1，已强制改为 1");
+            mainClass.getLogger().warning(
+                    ServerLanguageService.translate(TranslateKeys.Log.ARENA_MAX_ARENAS_INVALID));
             maxArenas = 1;
         }
 
@@ -321,6 +323,18 @@ public class ArenaManager implements Module {
     // ---------- 状态查询 ----------
 
     /**
+     * 查询借据当前登记的借入者
+     *
+     * @param token 借据
+     *
+     * @return 借入者标识（用户包 Id 或内置地图名）；借据无效时返回{@code null}
+     * */
+    public @Nullable String borrowerOf(@NonNull ArenaToken token) {
+        if (!validateToken(token)) return null;
+        return arenaState(token.getArenaId()).getBorrower();
+    }
+
+    /**
      * 获取最大竞技场数量
      * */
     public @NonNull Integer getMaxArenas() {
@@ -399,8 +413,9 @@ public class ArenaManager implements Module {
 
         // 冲突检查：目录在归还/卸载时已删除，仍存在即残留或同名无关目录，拒绝覆盖
         if (Files.exists(worldDir)) {
-            String techDetail = "竞技场世界目录已存在，拒绝覆盖：" + worldDir.toAbsolutePath();
-            VoidAirRace.getInstance().getLogger().warning(techDetail);
+            String techDetail = ServerLanguageService.translate(
+                    TranslateKeys.Log.ARENA_WORLD_DIR_CONFLICT, worldDir.toAbsolutePath());
+            Voidairrace.getInstance().getLogger().warning(techDetail);
             throw new ArenaException(techDetail,
                     Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_DIR_CONFLICT));
         }
@@ -447,8 +462,9 @@ public class ArenaManager implements Module {
 
         // 竞技场世界目录缺失说明模板未复制，拒绝凭空创建空世界
         if (!Files.isDirectory(worldDir)) {
-            String techDetail = "竞技场世界目录不存在，无法加载竞技场世界：" + worldDir.toAbsolutePath();
-            VoidAirRace.getInstance().getLogger().warning(techDetail);
+            String techDetail = ServerLanguageService.translate(
+                    TranslateKeys.Log.ARENA_WORLD_DIR_MISSING, worldDir.toAbsolutePath());
+            Voidairrace.getInstance().getLogger().warning(techDetail);
             throw new ArenaException(techDetail,
                     Component.translatable(TranslateKeys.Arena.ARENA_MANAGER_DIR_MISSING));
         }
@@ -485,8 +501,8 @@ public class ArenaManager implements Module {
         // 卸载世界（不保存）；卸载成功才删除目录，避免删除仍在使用中的世界目录
         boolean unloaded = Boolean.TRUE.equals(Bukkit.unloadWorld(world, false));
         if (!unloaded) {
-            VoidAirRace.getInstance().getLogger().severe(
-                    "卸载竞技场世界失败，暂不删除其世界目录：" + arenaIdToWorldName(arenaId));
+            Voidairrace.getInstance().getLogger().severe(ServerLanguageService.translate(
+                    TranslateKeys.Log.ARENA_UNLOAD_FAILED, arenaIdToWorldName(arenaId)));
             return;
         }
         deleteWorldDirectory(Path.of(arenaIdToWorldName(arenaId)));
@@ -525,15 +541,15 @@ public class ArenaManager implements Module {
      * 在世界目录中添加提示文件（目录须已存在，由竞技场数据复制时创建）
      * */
     private void addTips(@NonNull String targetDir) {
-        VoidAirRace mainClass = VoidAirRace.getInstance();
+        Voidairrace mainClass = Voidairrace.getInstance();
         File targetDirFile = new File(targetDir);
         for (String tipText : tips) {
             File tipFile = new File(targetDirFile, tipText);
             try {
                 tipFile.createNewFile();
             } catch (IOException e) {
-                mainClass.getLogger().warning(
-                        "在竞技场世界目录 " + targetDir + " 中创建提示文件 '" + tipText + "' 失败：" + e.getMessage());
+                mainClass.getLogger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.ARENA_TIP_FILE_CREATE_FAILED, targetDir, tipText, e.getMessage()));
             }
         }
     }
@@ -547,8 +563,8 @@ public class ArenaManager implements Module {
      * */
     private static void deleteWorldDirectory(@NonNull Path dir) {
         if (!ARENA_WORLD_DIR_NAME.matcher(dir.getFileName().toString()).matches()) {
-            VoidAirRace.getInstance().getLogger().severe(
-                    "目标目录名不符合竞技场世界命名模式，拒绝删除：" + dir.toAbsolutePath());
+            Voidairrace.getInstance().getLogger().severe(ServerLanguageService.translate(
+                    TranslateKeys.Log.ARENA_DELETE_DIR_NAME_MISMATCH, dir.toAbsolutePath()));
             return;
         }
         try (var paths = Files.walk(dir)) {
@@ -556,13 +572,15 @@ public class ArenaManager implements Module {
                 try {
                     Files.delete(path);
                 } catch (IOException e) {
-                    VoidAirRace.getInstance().getLogger().log(
-                            Level.SEVERE, "删除竞技场世界文件失败：" + path.toAbsolutePath(), e);
+                    Voidairrace.getInstance().getLogger().log(
+                            Level.SEVERE, ServerLanguageService.translate(
+                                    TranslateKeys.Log.ARENA_DELETE_FILE_FAILED, path.toAbsolutePath()), e);
                 }
             });
         } catch (IOException e) {
-            VoidAirRace.getInstance().getLogger().log(
-                    Level.SEVERE, "遍历竞技场世界目录失败：" + dir.toAbsolutePath(), e);
+            Voidairrace.getInstance().getLogger().log(
+                    Level.SEVERE, ServerLanguageService.translate(
+                            TranslateKeys.Log.ARENA_WALK_DIR_FAILED, dir.toAbsolutePath()), e);
         }
     }
 

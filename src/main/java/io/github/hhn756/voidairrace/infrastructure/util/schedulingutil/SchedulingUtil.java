@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.infrastructure.util.schedulingutil;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -27,7 +27,7 @@ public class SchedulingUtil implements Module {
 
     /** 插件启用时执行 */
     private void onLoad() {
-        mainClass = VoidAirRace.getInstance();
+        mainClass = Voidairrace.getInstance();
         bukkitScheduler = Bukkit.getScheduler();
     }
 

@@ -69,7 +69,7 @@ public final class PackServer {
 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), BACKLOG);
         ThreadFactory threadFactory = runnable -> {
-            Thread thread = new Thread(runnable, "voidairrace-resource-pack-http");
+            Thread thread = new Thread(runnable, "Voidairrace-resource-pack-http");
             thread.setDaemon(true);
             return thread;
         };

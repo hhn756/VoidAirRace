@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script.api.register;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
 import io.github.hhn756.voidairrace.addons.script.api.handle.HandleApi;
@@ -11,6 +11,7 @@ import io.github.hhn756.voidairrace.core.matchrule.MatchRule;
 import io.github.hhn756.voidairrace.core.matchrule.RuleEntry;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.load.ChunkClassLoader;
@@ -175,8 +176,9 @@ public final class LuaRule implements MatchRule {
         ValueResult<Object[]> result = ScriptCallGate.call(
                 stateContext, chunkClassLoader, fn, HandleApi.forMatch(stateContext, match, source));
         if (!result.hasValue()) {
-            VoidAirRace.getInstance().getLogger().warning(
-                    "用户规则的 " + what + " 回调调用失败：" + owner + "（" + result.techMessage() + "）"
+            Voidairrace.getInstance().getLogger().warning(
+                    ServerLanguageService.translate(
+                            TranslateKeys.Log.LUA_RULE_CALLBACK_FAILED, what, owner, result.techMessage())
             );
         }
     }

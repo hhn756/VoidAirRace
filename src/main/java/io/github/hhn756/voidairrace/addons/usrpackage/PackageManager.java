@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.addons.usrpackage;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.TagEntry;
 import io.github.hhn756.voidairrace.addons.TagRegistrar;
 import io.github.hhn756.voidairrace.addons.script.PackageScriptService;
@@ -21,6 +21,7 @@ import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.result.ItemResult;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
@@ -158,7 +159,8 @@ public class PackageManager implements Module {
     public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         // RuleRegistrar：包脚本注册规则时需要 RULE 类别已创建
         // TagRegistrar：包脚本注册元素（规则的标签引用）时需要 TAG 类别已创建
-        return List.of(PackageScriptService.class, Config.class, RuleRegistrar.class, TagRegistrar.class);
+        // ServerLanguageService：包扫描与加载结果在加载期就要按配置语言输出日志
+        return List.of(PackageScriptService.class, Config.class, ServerLanguageService.class, RuleRegistrar.class, TagRegistrar.class);
     }
 
     /** 插件启用时执行 */
@@ -463,9 +465,9 @@ public class PackageManager implements Module {
             // 驱逐脚本运行时状态：环境表登记与共享函数缓存条目
             scriptService.discard(packageName);
 
-            VoidAirRace.getInstance().getLogger().info("已卸载用户包 " + packageName
-                    + "（来源：" + removed.describe() + "）：注销地图 " + mapIds
-                    + "，规则 " + ruleIds + "，标签 " + tagIds);
+            Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_MANAGER_UNLOADED,
+                    packageName, removed.describe(), mapIds, ruleIds, tagIds));
             return new PackageUnloadResult(packageName, removed, null);
         } catch (RuntimeException e) {
             return new PackageUnloadResult(packageName, null, OperationResult.failure(

@@ -2,7 +2,7 @@ package io.github.hhn756.voidairrace.playerinteraction.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.PermissionNode;
 import io.github.hhn756.voidairrace.constants.Plugin;
@@ -26,6 +26,7 @@ import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
@@ -59,7 +60,7 @@ public class VoidAirRaceCommand implements BootstrapStage {
                     .then(playerBranch())
                     .then(debugBranch())
                     .build();
-            commandsEvent.registrar().register(node, "VoidAirRace 主命令", List.of("var"));
+            commandsEvent.registrar().register(node, "Voidairrace 主命令", List.of("var"));
         });
     }
 
@@ -84,7 +85,9 @@ public class VoidAirRaceCommand implements BootstrapStage {
                                 sender.sendMessage(message.color(NamedTextColor.RED));
                                 String techMessage = startResult.techMessage();
                                 if (techMessage != null) {
-                                    VoidAirRace.getInstance().getLogger().warning("开始比赛失败：" + techMessage);
+                                    Voidairrace.getInstance().getLogger().warning(
+                                            ServerLanguageService.translate(
+                                                    TranslateKeys.Log.COMMAND_MATCH_START_FAILED, techMessage));
                                 }
                                 return 0;
                             }
@@ -105,7 +108,9 @@ public class VoidAirRaceCommand implements BootstrapStage {
                                 sender.sendMessage(message.color(NamedTextColor.RED));
                                 String techMessage = stopResult.techMessage();
                                 if (techMessage != null) {
-                                    VoidAirRace.getInstance().getLogger().warning("结束比赛失败：" + techMessage);
+                                    Voidairrace.getInstance().getLogger().warning(
+                                            ServerLanguageService.translate(
+                                                    TranslateKeys.Log.COMMAND_MATCH_STOP_FAILED, techMessage));
                                 }
                                 return 1;
                             }

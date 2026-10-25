@@ -8,6 +8,14 @@ import java.util.Map;
 
 public class GlobalSettingKey {
     /**
+     * 服务端语言：取值为 {@code service.language.Language} 中的语言代码<br>
+     * 值无法识别时回退到美式英语并记录警告
+     * */
+    public static final ConfigKey<String> LANGUAGE = new ConfigKey<>(
+            "language", "zh_cn", "服务端语言：zh_cn（简体中文）或 en_us（美式英语）"
+    ){};
+
+    /**
      * 世界/大厅重生点位置<br>
      * 默认值采用 Location 的预序列化 Map 形式（含世界名字符串）：既不要求定义时存在世界实例，
      * 物化出的文件也与手工维护时期的默认块保持一致
@@ -68,6 +76,7 @@ public class GlobalSettingKey {
     ){};
 
     public static final ConfigKey<?>[] ALL_KEYS = {
+            LANGUAGE,
             SPAWN_LOCATION,
             HIDE_ASCII_LOGO,
             ENABLE_RESOURCE_PACK_DISTRIBUTION_HTTP,

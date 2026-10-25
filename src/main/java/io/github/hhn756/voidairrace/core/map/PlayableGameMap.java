@@ -26,6 +26,17 @@ public abstract class PlayableGameMap extends GameMap {
     }
 
     /**
+     * 地图的每游戏刻回调<br>
+     * 使用此地图的比赛进行期间由地图组件逐刻调用（主线程，比赛开始后启动、结束时停止）；
+     * 默认空实现，地图可在此处理位置轮询、计时等连续逻辑——这类逻辑不适合事件
+     * <p>
+     * 调用频率固定为每刻一次，实现方自行避免耗时操作
+     *
+     * @param match 使用此地图的比赛
+     * */
+    public void tick(@NonNull Match match) {}
+
+    /**
      * 在 使用此地图的比赛 结束时进行
      * */
     public @NonNull OperationResult over(@NonNull Match match) {

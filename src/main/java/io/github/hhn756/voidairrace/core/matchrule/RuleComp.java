@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.matchrule;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.Plugin;
@@ -54,7 +54,7 @@ public class RuleComp extends MatchComp
     public @NonNull ValueResult<CustomData> install(@NonNull Match match, CustomData startArg) {
         this.match = match;
         // 启动 tick 调度器
-        tickTask = Bukkit.getScheduler().runTaskTimer(VoidAirRace.getInstance(), () -> {
+        tickTask = Bukkit.getScheduler().runTaskTimer(Voidairrace.getInstance(), () -> {
             new ArrayList<>(activeRules).forEach(rule -> rule.tick(match));
         }, 0L, 1L);
         return ValueResult.empty();
@@ -117,7 +117,7 @@ public class RuleComp extends MatchComp
         }
         activeRules.add(rule);
         if (rule instanceof Listener listener) {
-            Bukkit.getPluginManager().registerEvents(listener, VoidAirRace.getInstance());
+            Bukkit.getPluginManager().registerEvents(listener, Voidairrace.getInstance());
             ruleListeners.put(rule, listener);
         }
         return OperationResult.success();

@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.match;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.componentbase.*;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
@@ -12,6 +12,7 @@ import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -282,10 +283,11 @@ public class Match {
             } catch (Exception e) {
                 if (startableComp instanceof MatchComp matchComp) {
                     // 记录日志，继续执行
-                    VoidAirRace.getInstance().getLogger().warning(
-                            "回滚时卸载组件 '"
-                                    + matchComp.getMeta().names()
-                                    + "' 失败：" + e.getMessage());
+                    Voidairrace.getInstance().getLogger().warning(
+                            ServerLanguageService.translate(
+                                    TranslateKeys.Log.MATCH_ROLLBACK_UNINSTALL_FAILED,
+                                    matchComp.getMeta().names(),
+                                    e.getMessage()));
                 }
             }
         }
@@ -348,7 +350,7 @@ public class Match {
             @NonNull HashMap<@NonNull Class<? extends MatchComp>, CustomData> argMap,
             @NonNull Map<@NonNull DataKey<?>, @NonNull CustomData> endContext
     ) {
-        Logger logger = VoidAirRace.getInstance().getLogger();
+        Logger logger = Voidairrace.getInstance().getLogger();
         // 获取该组件对应的结束参数（可能为 null）
         CustomData arg = argMap.get(component.getClass());
         ValueResult<EC> result = null;
@@ -364,15 +366,17 @@ public class Match {
             if (!result.isSuccess()) {
                 // 技术性消息只进日志（用户通道在此处没有发送对象）
                 logger.warning(
-                        "卸载比赛组件 '"
-                        + compName
-                        + "' 失败：" + result.techMessage());
+                        ServerLanguageService.translate(
+                                TranslateKeys.Log.MATCH_UNINSTALL_FAILED,
+                                compName,
+                                result.techMessage()));
             }
         } catch (Exception e) {
             logger.warning(
-                    "卸载比赛组件 '"
-                            + compName
-                            + "' 时发生异常：" + e.getMessage());
+                    ServerLanguageService.translate(
+                            TranslateKeys.Log.MATCH_UNINSTALL_EXCEPTION,
+                            compName,
+                            e.getMessage()));
         }
         if (result instanceof ValueResult.WithValue(var ctx)) {
             // 组件产出了结束上下文

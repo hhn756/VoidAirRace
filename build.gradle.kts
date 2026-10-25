@@ -127,6 +127,7 @@ tasks.register("generateTranslateKeys") {
             "$ns.audio_visual_services." to "AudioVisualServices",
             "$ns.base_components." to "BaseComponents",
             "$ns.component_registry." to "ComponentRegistry",
+            "$ns.log." to "Log",
         )
 
         // 语言文件固定取插件自带资源包

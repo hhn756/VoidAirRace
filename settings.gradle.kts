@@ -1,4 +1,4 @@
-rootProject.name = "VoidAirRace"
+rootProject.name = "Voidairrace"
 
 pluginManagement {
     repositories {

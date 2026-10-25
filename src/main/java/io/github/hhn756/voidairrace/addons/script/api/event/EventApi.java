@@ -1,13 +1,13 @@
 package io.github.hhn756.voidairrace.addons.script.api.event;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
-import io.github.hhn756.voidairrace.event.MatchOverEvent;
-import io.github.hhn756.voidairrace.event.PlayerLeaveMatchEvent;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.event.UsrPackageUnloadEvent;
 import io.github.hhn756.voidairrace.infrastructure.util.lua.ApiArgs;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.sandius.rembulan.ByteString;
@@ -22,7 +22,6 @@ import net.sandius.rembulan.runtime.ExecutionContext;
 import net.sandius.rembulan.runtime.LuaFunction;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.jspecify.annotations.NonNull;
@@ -33,13 +32,13 @@ import java.util.List;
 
 /**
  * 事件订阅类别（全局表{@code event}）的 Lua API 入口：{@code on} 与 {@code off}<br>
- * 事件词表见{@link ScriptEvent}。本类完整拥有本类别全部逻辑：订阅登记、
+ * 事件列表见{@link ScriptEvent}。本类完整拥有本类别全部逻辑：订阅登记、
  * 引擎事件的桥接派发与随包卸载的清扫——每包一个实例，实例随包生死
  * <p>
- * 事件桥接：每实例自注册一个 Bukkit 监听器，收到引擎事件后向本包订阅者派发
- * Lua 回调（每次调用经{@link ScriptCallGate}独立预算）；回调失败响亮处理
- * （记日志+广播原因），不自动终止比赛——全局回调不承担比赛推进职责，
- * 且比赛结束事件中触发 stop 存在重入风险
+ * 事件桥接：每实例自注册一组按事件域拆分的 Bukkit 监听器（见{@link MatchEventBridge}、
+ * {@link PlayerEventBridge}），收到引擎事件后向本包订阅者派发 Lua 回调
+ * （每次调用经{@link ScriptCallGate}独立计算指令预算）。回调抛错时记日志并广播原因，
+ * 不自动终止比赛——全局回调不承担比赛推进职责，且比赛结束事件中触发 stop 存在重入风险
  * <p>
  * 清扫：监听{@link UsrPackageUnloadEvent}，包 Id 匹配即注销桥接监听器、清空订阅
  * */
@@ -56,8 +55,8 @@ public final class EventApi {
     /** 事件订阅登记（登记顺序即派发顺序）；同一事件可登记多个监听器 */
     private final @NonNull List<@NonNull Subscription> subscriptions = new ArrayList<>();
 
-    /** 事件桥接监听器（随实例注册，随清扫注销） */
-    private final @NonNull BridgeListener bridgeListener;
+    /** 事件桥接监听器（按事件域拆分，随实例注册，随清扫注销） */
+    private final @NonNull List<@NonNull Listener> bridges;
 
     private EventApi(
             @NonNull UsrPackage pkg,
@@ -67,9 +66,11 @@ public final class EventApi {
         this.pkg = pkg;
         this.stateContext = stateContext;
         this.chunkClassLoader = chunkClassLoader;
-        this.bridgeListener = new BridgeListener();
-        Bukkit.getPluginManager().registerEvents(this.bridgeListener, VoidAirRace.getInstance());
-        Bukkit.getPluginManager().registerEvents(new UnloadListener(), VoidAirRace.getInstance());
+        this.bridges = List.of(new MatchEventBridge(this), new PlayerEventBridge(this));
+        for (Listener bridge : bridges) {
+            Bukkit.getPluginManager().registerEvents(bridge, Voidairrace.getInstance());
+        }
+        Bukkit.getPluginManager().registerEvents(new UnloadListener(), Voidairrace.getInstance());
     }
 
     /**
@@ -96,11 +97,16 @@ public final class EventApi {
 
     // ------ 供本类别函数类访问的状态 ------
 
+    /** 共享 Lua 状态上下文：事件桥接把 Java 值写成 Lua 表时需要 */
+    @NonNull StateContext stateContext() {
+        return stateContext;
+    }
+
     /**
      * 登记一个事件监听器<br>
      * 同一事件可登记多个监听器（含同一函数重复登记，按登记次数派发）
      *
-     * @param event    订阅的事件类型（词表成员）
+     * @param event    订阅的事件类型（本表成员）
      * @param callback 事件触发时派发的 Lua 回调
      * */
     public void subscribe(@NonNull ScriptEvent event, @NonNull LuaFunction callback) {
@@ -116,17 +122,34 @@ public final class EventApi {
     }
 
     /**
-     * 向本包的某事件订阅者派发回调；每次调用独立预算，失败响亮处理（日志+广播），不中断其他订阅者
+     * 本包是否登记了指定事件的订阅者<br>
+     * 桥接在采集载荷前先问一次：无人订阅的高频事件（如移动）在源头就零开销，
+     * 不做方块比较与限速记录
+     *
+     * @param event 事件类型
+     *
+     * @return 至少有一个订阅者时为{@code true}
      * */
-    private void dispatch(@NonNull ScriptEvent event, @NonNull Object... args) {
+    boolean hasSubscribers(@NonNull ScriptEvent event) {
+        for (Subscription sub : subscriptions) {
+            if (sub.event() == event) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 向本包的某事件订阅者派发回调；每次调用独立计算指令预算，抛错时记日志并广播，不中断其他订阅者
+     * */
+    void dispatch(@NonNull ScriptEvent event, @Nullable Object... args) {
         for (Subscription sub : List.copyOf(subscriptions)) {
             if (sub.event() != event) continue;
             ValueResult<Object[]> result = ScriptCallGate.call(
                     stateContext, chunkClassLoader, sub.callback(), args);
             if (!result.hasValue()) {
-                VoidAirRace.getInstance().getLogger().warning(
-                        "包 " + pkg.id() + " 的事件回调出错（事件 " + event.eventName() + "）："
-                                + result.techMessage());
+                Voidairrace.getInstance().getLogger().warning(
+                        ServerLanguageService.translate(
+                                TranslateKeys.Log.EVENT_API_CALLBACK_FAILED,
+                                pkg.id(), event.eventName(), result.techMessage()));
                 Bukkit.getServer().broadcast(Component.text(
                         "包 " + pkg.id() + " 的事件回调出错（事件 " + event.eventName() + "）",
                         NamedTextColor.RED));
@@ -139,25 +162,14 @@ public final class EventApi {
 
     // ------ 引擎事件桥接 ------
 
-    /** 引擎事件 → 本包 Lua 订阅者的桥接监听器 */
-    private final class BridgeListener implements Listener {
-        @EventHandler(priority = EventPriority.MONITOR)
-        public void onPlayerLeaveMatch(@NonNull PlayerLeaveMatchEvent event) {
-            dispatch(ScriptEvent.PLAYER_LEAVE_MATCH, ByteString.of(event.getPlayer().getUniqueId().toString()));
-        }
-
-        @EventHandler(priority = EventPriority.MONITOR)
-        public void onMatchOver(@NonNull MatchOverEvent event) {
-            dispatch(ScriptEvent.MATCH_OVER);
-        }
-    }
-
     /** 包卸载清扫监听器：只清本包的订阅与桥接 */
     private final class UnloadListener implements Listener {
         @EventHandler
         public void onUnload(@NonNull UsrPackageUnloadEvent event) {
             if (!event.getPkgId().equals(pkg.id())) return;
-            HandlerList.unregisterAll(bridgeListener);
+            for (Listener bridge : bridges) {
+                HandlerList.unregisterAll(bridge);
+            }
             HandlerList.unregisterAll(this);
             subscriptions.clear();
         }
@@ -167,7 +179,7 @@ public final class EventApi {
 
     /**
      * {@code event.on(name, callback)}：订阅引擎事件<br>
-     * {@code name} 为词表事件名（见{@link ScriptEvent}），未知事件名即抛错；
+     * {@code name} 为事件名（见{@link ScriptEvent}），未知事件名即抛错；
      * 同一事件可登记多个监听器，派发按登记顺序，无返回值。
      * 回调在主线程执行，载荷为位置参数
      * */

@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.infrastructure.config.file;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigDefinition;
 
 import java.nio.file.Path;
@@ -11,7 +11,7 @@ public class PublicFile {
      * 存放所有临时文件的目录
      * */
     public static final Path TEMP_DIR = Paths.get(
-            VoidAirRace.getInstance().getDataFolder().getAbsolutePath(), "temp/");
+            Voidairrace.getInstance().getDataFolder().getAbsolutePath(), "temp/");
 
     /**
      * 游戏玩法相关设置

@@ -1,11 +1,13 @@
 package io.github.hhn756.voidairrace;
 
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.modules.Modules;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -15,7 +17,7 @@ import java.util.logging.Logger;
 /**
  * 插件主类
  * */
-public class VoidAirRace extends JavaPlugin {
+public class Voidairrace extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
@@ -39,7 +41,7 @@ public class VoidAirRace extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        getLogger().fine("禁用中...");
+        getLogger().fine(ServerLanguageService.translate(TranslateKeys.Log.PLUGIN_DISABLING));
 
         // 按加载逆序卸载模块链
         Modules.unloadAll();
@@ -50,17 +52,17 @@ public class VoidAirRace extends JavaPlugin {
     /**
      * 插件本次启用中的主类实例
      * */
-    private static @Nullable VoidAirRace instance;
+    private static @Nullable Voidairrace instance;
 
     /**
      * 用于获取插件主类实例，方便访问公共资源
      *
      * @return 主类实例
      *
-     * @throws NullPointerException 主类实例不存在时抛出，正常情况下无法触发
+     * @throws NullPointerException 主类实例不存在时抛出。正常情况下无法触发，非bootstrap期执行的代码均不会触发此异常，可以不处理
      * */
     // 虽然禁用后为null，但 其他部分被禁止在插件禁用时运行 且 插件启用后首先会更新变量值，所以其他部分不可能获取到 null
-    public static @NonNull VoidAirRace getInstance() throws NullPointerException {
+    public static @NonNull Voidairrace getInstance() throws NullPointerException {
         if (instance == null) throw new NullPointerException("插件主类实例不存在");
         return instance;
     }

@@ -1,5 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script.api.handle;
 
+import io.github.hhn756.voidairrace.addons.script.MutationAccess;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.Plugin;
@@ -46,7 +47,7 @@ import java.util.UUID;
  * <p>
  * 留在句柄上的操作均以「对哪场比赛生效」为语义的一部分：枚举/淘汰/加入参赛者、
  * 启用比赛规则、登记比赛区域、查比赛状态与存活/排行情况、结束比赛、读写比赛时间。
- * 比赛结束后调用即抛 Lua 错误（对已卸载组件操作属未定义行为，必须响亮）；
+ * 比赛结束后调用即抛 Lua 错误（对已卸载组件操作属未定义行为，必须抛错）；
  * 收尾回调（如地图 {@code on_over}）经{@link HandleApi#forEndingMatch}构造，
  * 只放行查询类函数。其余操作见包环境的插件全局表
  * （{@code server.broadcast / player.position / player.team_of / arena.borrow /
@@ -626,6 +627,8 @@ public final class MatchHandle {
             }
 
             var token = arena.requireToken();
+            // 只能把本包借到的竞技场登记进比赛，防止挪用他包的竞技场
+            MutationAccess.requireArena(handle.callerPackage, token);
             // 登记双写：比赛区域集合（归还职责）+ 管理器标记（手动归还通道关闭）
             io.github.hhn756.voidairrace.service.arena.ArenaManager.getInstance().markMatchArea(token);
             match.comp(ScopeComp.class).widen(new MatchArea(token, areaTag));

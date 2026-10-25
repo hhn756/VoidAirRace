@@ -1,6 +1,8 @@
 package io.github.hhn756.voidairrace.infrastructure.util;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.jspecify.annotations.Nullable;
 
 import java.io.BufferedReader;
@@ -32,7 +34,7 @@ public class ClassScanner {
     /**
      * 读索引固定使用的类加载器：插件主类的类加载器（索引与插件主类随同一 jar）
      * */
-    private static final ClassLoader PLUGIN_LOADER = VoidAirRace.class.getClassLoader();
+    private static final ClassLoader PLUGIN_LOADER = Voidairrace.class.getClassLoader();
 
     /**
      * 已解析的索引缓存<br>
@@ -49,7 +51,7 @@ public class ClassScanner {
      * @return 符合条件的子类列表（不包含 type 本身）
      * */
     public static <T> Collection<Class<T>> scanSubclasses(Class<T> type) {
-        return scanSubclasses(type, VoidAirRace.class.getPackage().getName());
+        return scanSubclasses(type, Voidairrace.class.getPackage().getName());
     }
 
     /**
@@ -68,7 +70,7 @@ public class ClassScanner {
     public static <T> Collection<Class<T>> scanSubclasses(Class<T> type, String basePackage) {
         // 如果未指定包名，则使用插件主类的包
         if (basePackage == null || basePackage.trim().isEmpty()) {
-            basePackage = VoidAirRace.class.getPackage().getName();
+            basePackage = Voidairrace.class.getPackage().getName();
         }
 
         // 1. 编译期索引
@@ -80,10 +82,11 @@ public class ClassScanner {
 
         // 2. 回退：运行时扫描插件代码源（jar 文件或编译输出目录）
         try {
-            URL location = VoidAirRace.class.getProtectionDomain().getCodeSource().getLocation();
+            URL location = Voidairrace.class.getProtectionDomain().getCodeSource().getLocation();
             return runtimeScan(PLUGIN_LOADER, location, type, basePackage);
         } catch (Exception e) {
-            VoidAirRace.getInstance().getLogger().log(Level.SEVERE, "扫描插件类失败", e);
+            Voidairrace.getInstance().getLogger().log(Level.SEVERE,
+                    ServerLanguageService.translate(TranslateKeys.Log.CLASS_SCANNER_SCAN_FAILED), e);
             return Collections.emptyList();
         }
     }
@@ -175,8 +178,8 @@ public class ClassScanner {
                 }
             } catch (Throwable t) {
                 // 单个类加载失败不阻断其余（链接错误一并容错）
-                VoidAirRace.getInstance().getLogger().warning(
-                        "无法加载子类索引中的类 " + className + "：" + t);
+                Voidairrace.getInstance().getLogger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.CLASS_SCANNER_INDEX_CLASS_UNLOADABLE, className, t));
             }
         }
         return Collections.unmodifiableList(result);
@@ -228,8 +231,9 @@ public class ClassScanner {
             }
             return Collections.unmodifiableList(result);
         } catch (Exception e) {
-            Logger logger = VoidAirRace.getInstance().getLogger();
-            logger.log(Level.SEVERE, "运行时扫描类失败", e);
+            Logger logger = Voidairrace.getInstance().getLogger();
+            logger.log(Level.SEVERE,
+                    ServerLanguageService.translate(TranslateKeys.Log.CLASS_SCANNER_RUNTIME_SCAN_FAILED), e);
             // 忽略异常，返回空列表
             return Collections.emptyList();
         }

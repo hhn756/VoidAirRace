@@ -37,10 +37,7 @@ public class MatchOverEvent extends Event {
     private final Match match;
 
     /** 结束上下文（组件的自定义数据） */
-    private final Map<
-            @NonNull DataKey<?>,
-            CustomData
-    > context;
+    private final Map<@NonNull DataKey<?>,CustomData> context;
 
     /**
      * 构造一个比赛结束事件
@@ -49,10 +46,7 @@ public class MatchOverEvent extends Event {
      */
     public MatchOverEvent(
             Match match,
-            Map<
-                    @NonNull DataKey<?>,
-                    CustomData
-            > context
+            Map<DataKey<?>, CustomData> context
     ) {
         this.match = match;
         this.context = context;

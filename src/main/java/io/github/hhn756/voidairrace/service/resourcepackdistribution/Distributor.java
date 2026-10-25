@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.service.resourcepackdistribution;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
@@ -8,6 +8,7 @@ import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.modules.ListenerProvider;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.resource.ResourcePackInfo;
 import net.kyori.adventure.resource.ResourcePackRequest;
@@ -78,7 +79,7 @@ public class Distributor implements Module, ListenerProvider, Listener {
     private void onLoad() {
         YamlConfig settings = Config.getInstance().getYmlConfig(PublicFile.GLOBAL_SETTING);
         if (!settings.get(GlobalSettingKey.ENABLE_RESOURCE_PACK_DISTRIBUTION_HTTP, false)) {
-            logger().fine("资源包分发未启用：配置项未开启");
+            logger().fine(ServerLanguageService.translate(TranslateKeys.Log.RESOURCE_PACK_DISABLED_BY_CONFIG));
             return;
         }
 
@@ -86,19 +87,22 @@ public class Distributor implements Module, ListenerProvider, Listener {
         try {
             externalAddress = parseExternalAddress(settings.get(GlobalSettingKey.RESOURCE_PACK_DISTRIBUTION_HTTP_EXTERNAL_ADDRESS));
         } catch (IllegalArgumentException e) {
-            logger().warning("资源包分发未启用：" + e.getMessage());
+            logger().warning(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_DISABLED_INVALID_ADDRESS, e.getMessage()));
             return;
         }
 
         int listenPort = settings.get(GlobalSettingKey.RESOURCE_PACK_DISTRIBUTION_HTTP_LISTEN_PORT);
         if (listenPort < 1 || listenPort > 65535) {
-            logger().warning("资源包分发未启用：监听端口不在 1-65535 范围内（" + listenPort + "）");
+            logger().warning(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_DISABLED_INVALID_PORT, listenPort));
             return;
         }
 
         int maxConcurrentRequests = settings.get(GlobalSettingKey.RESOURCE_PACK_DISTRIBUTION_HTTP_MAX_CONCURRENT_REQUESTS);
         if (maxConcurrentRequests < 1) {
-            logger().warning("资源包分发未启用：并发请求上限须为正数（" + maxConcurrentRequests + "）");
+            logger().warning(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_DISABLED_INVALID_CONCURRENCY, maxConcurrentRequests));
             return;
         }
 
@@ -106,7 +110,8 @@ public class Distributor implements Module, ListenerProvider, Listener {
         try {
             packed = PackArchive.pack();
         } catch (IOException e) {
-            logger().log(Level.WARNING, "资源包分发未启用：打包插件内置资源包失败", e);
+            logger().log(Level.WARNING,
+                    ServerLanguageService.translate(TranslateKeys.Log.RESOURCE_PACK_PACK_FAILED), e);
             return;
         }
 
@@ -115,7 +120,8 @@ public class Distributor implements Module, ListenerProvider, Listener {
             server = PackServer.start(
                     listenPort, pathOf(externalAddress), packed.content(), maxConcurrentRequests);
         } catch (IOException | SecurityException e) {
-            logger().log(Level.WARNING, "资源包分发未启用：在端口 " + listenPort + " 上启动托管失败", e);
+            logger().log(Level.WARNING, ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_SERVER_START_FAILED, listenPort), e);
             return;
         }
 
@@ -123,10 +129,9 @@ public class Distributor implements Module, ListenerProvider, Listener {
                 server,
                 ResourcePackInfo.resourcePackInfo(packed.id(), externalAddress, packed.hash())
         );
-        logger().info("资源包分发已启用：对外地址 " + externalAddress
-                + "，监听端口 " + listenPort
-                + "，并发请求上限 " + maxConcurrentRequests
-                + "，摘要 " + packed.hash());
+        logger().info(ServerLanguageService.translate(
+                TranslateKeys.Log.RESOURCE_PACK_ENABLED,
+                externalAddress, listenPort, maxConcurrentRequests, packed.hash()));
     }
 
     /** 卸载：停止托管并收束线程；分发未启用时为无操作 */
@@ -160,20 +165,26 @@ public class Distributor implements Module, ListenerProvider, Listener {
     private void onStatus(@NonNull UUID id, @NonNull ResourcePackStatus status, @NonNull Audience audience) {
         if (status.intermediate()) return;
 
-        String who = audience instanceof Player player ? player.getName() : "非玩家听众";
+        String who = audience instanceof Player player
+                ? player.getName()
+                : ServerLanguageService.translate(TranslateKeys.Log.RESOURCE_PACK_AUDIENCE_NON_PLAYER);
         switch (status) {
-            case SUCCESSFULLY_LOADED -> logger().fine("玩家 " + who + " 已应用资源包");
+            case SUCCESSFULLY_LOADED -> logger().fine(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_CLIENT_LOADED, who));
             case DECLINED -> {
-                logger().warning("玩家 " + who + " 拒绝了资源包，其自定义文本将不可见");
+                logger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.RESOURCE_PACK_CLIENT_DECLINED, who));
                 audience.sendMessage(Component.translatable(TranslateKeys.ResourcePack.DECLINED, DECLINED_FALLBACK));
             }
             case FAILED_DOWNLOAD -> {
-                logger().warning("玩家 " + who + " 的资源包下载失败");
+                logger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.RESOURCE_PACK_CLIENT_DOWNLOAD_FAILED, who));
                 audience.sendMessage(Component.translatable(
                         TranslateKeys.ResourcePack.FAILED_DOWNLOAD, FAILED_DOWNLOAD_FALLBACK));
             }
             default -> {
-                logger().warning("玩家 " + who + " 的资源包未能应用：" + status);
+                logger().warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.RESOURCE_PACK_CLIENT_APPLY_FAILED, who, status));
                 audience.sendMessage(Component.translatable(
                         TranslateKeys.ResourcePack.FAILED_APPLY, FAILED_APPLY_FALLBACK));
             }
@@ -187,22 +198,26 @@ public class Distributor implements Module, ListenerProvider, Listener {
      * */
     private static @NonNull URI parseExternalAddress(@Nullable String configured) {
         if (configured == null || configured.isBlank())
-            throw new IllegalArgumentException("对外地址未配置（不做退化，须显式填写客户端可访问的完整 URL）");
+            throw new IllegalArgumentException(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_ADDRESS_MISSING));
 
         URI address;
         try {
             address = new URI(configured.trim());
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("对外地址不是合法 URL：" + configured);
+            throw new IllegalArgumentException(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_ADDRESS_INVALID_URL, configured));
         }
 
         if (!"http".equals(address.getScheme()))
-            throw new IllegalArgumentException("对外地址须为明文 http 地址（当前为 " + address.getScheme() + "）"
-                    + "；加密托管需自备证书，本期不提供：" + configured);
+            throw new IllegalArgumentException(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_ADDRESS_NOT_HTTP, address.getScheme(), configured));
         if (address.getHost() == null)
-            throw new IllegalArgumentException("对外地址缺少主机名：" + configured);
+            throw new IllegalArgumentException(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_ADDRESS_NO_HOST, configured));
         if (address.getQuery() != null || address.getFragment() != null)
-            throw new IllegalArgumentException("对外地址不得携带查询串或片段：" + configured);
+            throw new IllegalArgumentException(ServerLanguageService.translate(
+                    TranslateKeys.Log.RESOURCE_PACK_ADDRESS_QUERY_OR_FRAGMENT, configured));
         return address;
     }
 
@@ -212,7 +227,7 @@ public class Distributor implements Module, ListenerProvider, Listener {
     }
 
     private static @NonNull Logger logger() {
-        return VoidAirRace.getInstance().getLogger();
+        return Voidairrace.getInstance().getLogger();
     }
 
     /**

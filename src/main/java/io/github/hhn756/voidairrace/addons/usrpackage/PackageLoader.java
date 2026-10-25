@@ -1,9 +1,10 @@
 package io.github.hhn756.voidairrace.addons.usrpackage;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.result.ValueResult;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -49,14 +50,15 @@ public class PackageLoader implements Module {
      * 单个包加载失败（无论可预期失败还是意外失败）只记录日志，不影响其余包
      * */
     private void onLoad(@NonNull PackageManager packageManager) {
-        Logger logger = VoidAirRace.getInstance().getLogger();
+        Logger logger = Voidairrace.getInstance().getLogger();
 
-        Path packagesDir = VoidAirRace.getInstance().getDataFolder().toPath().resolve(PACKAGES_DIR_NAME);
+        Path packagesDir = Voidairrace.getInstance().getDataFolder().toPath().resolve(PACKAGES_DIR_NAME);
         if (!Files.isDirectory(packagesDir)) {
             try {
                 Files.createDirectories(packagesDir);
             } catch (IOException e) {
-                logger.log(Level.SEVERE, "无法创建用户包目录 " + packagesDir + "，本次启用将不加载任何用户包", e);
+                logger.log(Level.SEVERE, ServerLanguageService.translate(
+                        TranslateKeys.Log.PACKAGE_LOADER_DIR_CREATE_FAILED, packagesDir), e);
                 return;
             }
         }
@@ -65,7 +67,8 @@ public class PackageLoader implements Module {
         try (var paths = Files.list(packagesDir)) {
             entries = paths.sorted().toList();
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "读取用户包目录 " + packagesDir + " 失败，本次启用将不加载任何用户包", e);
+            logger.log(Level.SEVERE, ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_DIR_READ_FAILED, packagesDir), e);
             return;
         }
 
@@ -84,8 +87,8 @@ public class PackageLoader implements Module {
             if (fs == null) continue;
             Path rootInZip = resolveZipPackageRoot(fs.getPath("/"), logger);
             if (rootInZip == null) {
-                logger.warning("跳过用户包 " + entry + "（zip 包）：压缩包内未找到 " + PackageManager.META_FILE_NAME
-                        + "（顶层没有元文件，也不是仅含单个子目录的包装形式）");
+                logger.warning(ServerLanguageService.translate(
+                        TranslateKeys.Log.PACKAGE_LOADER_ZIP_META_MISSING, entry, PackageManager.META_FILE_NAME));
                 closeZip(fs, entry, logger);
                 continue;
             }
@@ -102,8 +105,9 @@ public class PackageLoader implements Module {
         Map<String, List<String>> failureGroups = new LinkedHashMap<>(); // 失败键 → 各项技术性消息
         for (PackageManager.PackageLoadResult loadResult : results) {
             if (loadResult.exception() != null) {
-                logger.log(Level.SEVERE, "自动加载用户包 " + loadResult.root().describe()
-                        + " 时发生意外错误：" + loadResult.exception().getMessage(), loadResult.exception());
+                logger.log(Level.SEVERE, ServerLanguageService.translate(
+                        TranslateKeys.Log.PACKAGE_LOADER_UNEXPECTED_ERROR,
+                        loadResult.root().describe(), loadResult.exception().getMessage()), loadResult.exception());
                 continue;
             }
             ValueResult<UsrPackage> result = loadResult.result();
@@ -121,16 +125,21 @@ public class PackageLoader implements Module {
             }
         }
         if (loadedIds.isEmpty()) {
-            logger.info("未加载任何用户包（共扫描 " + results.size() + " 个）");
+            logger.info(ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_NONE_LOADED, results.size()));
         } else {
-            logger.info("已加载用户包 " + loadedIds.size() + "/" + results.size() + " 个：" + String.join("、", loadedIds));
+            logger.info(ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_LOADED_SUMMARY,
+                    loadedIds.size(), results.size(), String.join("、", loadedIds)));
         }
         if (!notEnabledNames.isEmpty()) {
-            logger.warning("以下用户包不在启用白名单（enable_packages）中，已跳过：" + String.join("、", notEnabledNames));
+            logger.warning(ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_NOT_ENABLED_SKIPPED, String.join("、", notEnabledNames)));
         }
         for (Map.Entry<String, List<String>> group : failureGroups.entrySet()) {
-            logger.warning("用户包加载失败（" + failureLabel(group.getKey()) + "）："
-                    + String.join("；", group.getValue()));
+            logger.warning(ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_FAILED_GROUP,
+                    failureLabel(group.getKey()), String.join("；", group.getValue())));
         }
 
         // 加载成功的 zip 包保持挂载（包内容在本次启用中仍会被读取），其余挂载立即关闭避免泄漏
@@ -148,7 +157,7 @@ public class PackageLoader implements Module {
      * 包的注册状态随 {@link PackageManager} 一并失效，无需额外清理
      * */
     private void onUnload() {
-        Logger logger = VoidAirRace.getInstance().getLogger();
+        Logger logger = Voidairrace.getInstance().getLogger();
         for (MountedZip mounted : mountedZips) {
             closeZip(mounted.fileSystem(), mounted.zipPath(), logger);
         }
@@ -157,17 +166,26 @@ public class PackageLoader implements Module {
 
     // ------ 内部辅助方法 ------
 
-    /** 失败原因翻译键 → 汇报行里的简短类别标签（未登记的键原样输出） */
-    private static final @NonNull Map<@NonNull String, @NonNull String> FAILURE_LABELS = Map.ofEntries(
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DIR_NOT_FOUND, "包目录不存在"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_NOT_A_PACKAGE, "缺少包元文件"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_META_SIZE_ERROR, "元文件尺寸异常"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_META_FIELD_FORMAT_ERROR, "元文件字段格式错误"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DEPENDENCY_CYCLE, "依赖存在循环"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_ID_DUPLICATE, "包 Id 重复"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_API_VERSION_UNSUPPORTED, "API 版本不受支持"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DEPENDENCY_MISSING, "依赖的包未加载"),
-            Map.entry(TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED, "入口脚本执行失败")
+    /** 失败原因翻译键 → 汇报行里简短类别标签的翻译键（未登记的键原样输出） */
+    private static final @NonNull Map<@NonNull String, @NonNull String> FAILURE_LABEL_KEYS = Map.ofEntries(
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DIR_NOT_FOUND,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_DIR_NOT_FOUND),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_NOT_A_PACKAGE,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_NOT_A_PACKAGE),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_META_SIZE_ERROR,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_META_SIZE_ERROR),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_META_FIELD_FORMAT_ERROR,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_META_FIELD_FORMAT_ERROR),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DEPENDENCY_CYCLE,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_DEPENDENCY_CYCLE),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_ID_DUPLICATE,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_ID_DUPLICATE),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_API_VERSION_UNSUPPORTED,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_API_VERSION_UNSUPPORTED),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_DEPENDENCY_MISSING,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_DEPENDENCY_MISSING),
+            Map.entry(TranslateKeys.Addons.USR_PACKAGE_ENTRY_SCRIPT_FAILED,
+                    TranslateKeys.Log.PACKAGE_LOADER_LABEL_ENTRY_SCRIPT_FAILED)
     );
 
     /**
@@ -175,11 +193,14 @@ public class PackageLoader implements Module {
      *
      * @param reasonKey 失败结果的翻译键，允许为{@code null}（视为未知原因）
      *
-     * @return 登记过的键返回对应标签，否则返回键原文；{@code null} 键返回「未知原因」
+     * @return 登记过的键返回对应标签的当前语言文本，否则返回键原文；{@code null} 键返回「未知原因」
      * */
     private static @NonNull String failureLabel(@Nullable String reasonKey) {
-        if (reasonKey == null) return "未知原因";
-        return FAILURE_LABELS.getOrDefault(reasonKey, reasonKey);
+        if (reasonKey == null) {
+            return ServerLanguageService.translate(TranslateKeys.Log.PACKAGE_LOADER_LABEL_UNKNOWN);
+        }
+        String labelKey = FAILURE_LABEL_KEYS.get(reasonKey);
+        return ServerLanguageService.translate(labelKey == null ? reasonKey : labelKey);
     }
 
     /**
@@ -207,7 +228,8 @@ public class PackageLoader implements Module {
             // 只读挂载：包内容不允许被修改
             return FileSystems.newFileSystem(zipPath, Map.of("readOnly", "true"));
         } catch (IOException | ProviderNotFoundException e) {
-            logger.log(Level.SEVERE, "挂载用户包压缩文件 " + zipPath + " 失败，已跳过", e);
+            logger.log(Level.SEVERE, ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_ZIP_MOUNT_FAILED, zipPath), e);
             return null;
         }
     }
@@ -229,7 +251,8 @@ public class PackageLoader implements Module {
         try (var paths = Files.list(zipRoot)) {
             topLevel = paths.toList();
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "读取 zip 包顶层目录 " + zipRoot + " 失败", e);
+            logger.log(Level.SEVERE, ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_ZIP_TOP_LEVEL_READ_FAILED, zipRoot), e);
             return null;
         }
 
@@ -255,7 +278,8 @@ public class PackageLoader implements Module {
         try {
             fs.close();
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "关闭用户包压缩文件 " + zipPath + " 的挂载文件系统失败", e);
+            logger.log(Level.SEVERE, ServerLanguageService.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_ZIP_CLOSE_FAILED, zipPath), e);
         }
     }
 }

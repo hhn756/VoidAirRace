@@ -1,8 +1,10 @@
 package io.github.hhn756.voidairrace.infrastructure.config;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.exception.ConfigException;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -68,7 +70,7 @@ public class Config implements Module {
      * 私有构造器，初始化配置管理器
      */
     private Config() {
-        VoidAirRace mainClass = VoidAirRace.getInstance();
+        Voidairrace mainClass = Voidairrace.getInstance();
         logger = mainClass.getLogger();
         configFolder = mainClass.getDataFolder();
     }
@@ -108,7 +110,9 @@ public class Config implements Module {
         }
         logAndThrow(
                 Level.SEVERE,
-                "无法保存配置文件 '" + config.getDefine().filePath() + "' 总共尝试了 " + maxRetries + " 次都失败了"
+                TranslateKeys.Log.CONFIG_SAVE_FAILED,
+                config.getDefine().filePath(),
+                maxRetries
         );
     }
 
@@ -154,7 +158,8 @@ public class Config implements Module {
         File parentDir = dataSourceFile.getParentFile();
         if (parentDir != null && !parentDir.exists() && !parentDir.mkdirs()) logAndThrow(
                 Level.SEVERE,
-                "无法创建插件配置目录: " + parentDir.getAbsolutePath());
+                TranslateKeys.Log.CONFIG_DIR_CREATE_FAILED,
+                parentDir.getAbsolutePath());
 
         // 确保配置文件存在：由配置键定义物化生成（默认值的唯一真相源是键定义）
         if (!dataSourceFile.isFile()) {
@@ -164,7 +169,8 @@ public class Config implements Module {
         // 检查文件是否可读
         if (!dataSourceFile.canRead()) logAndThrow(
                 Level.SEVERE,
-                "配置文件 '" + dataSourceFile.getAbsolutePath() + "' 无法读取，请检查权限");
+                TranslateKeys.Log.CONFIG_FILE_UNREADABLE,
+                dataSourceFile.getAbsolutePath());
 
         // 从文件加载配置数据
         return loadYmlConfig(configDefinition, dataSourceFile);
@@ -182,7 +188,7 @@ public class Config implements Module {
         try {
             ymlConfig.load(dataSource);
         } catch (Exception e) {
-            logAndThrow(Level.SEVERE, "无法加载配置文件 “" + configDefinition.filePath() + "”");
+            logAndThrow(Level.SEVERE, TranslateKeys.Log.CONFIG_LOAD_FAILED, configDefinition.filePath());
         }
         // 防止配置不全：为缺失键补默认值；发生补齐时保存并重载，使值类型转换与注释处理走与正常加载一致的路径
         if (fillMissingKeys(configDefinition, ymlConfig)) {
@@ -190,7 +196,7 @@ public class Config implements Module {
                 ymlConfig.save(dataSource);
                 ymlConfig.load(dataSource);
             } catch (Exception e) {
-                logAndThrow(Level.SEVERE, "补齐配置文件 '" + configDefinition.filePath() + "' 缺失字段后保存或重载失败");
+                logAndThrow(Level.SEVERE, TranslateKeys.Log.CONFIG_FILL_MISSING_FAILED, configDefinition.filePath());
             }
         }
 
@@ -202,10 +208,12 @@ public class Config implements Module {
     /**
      * 内部辅助方法，记录指定等级日志然后抛出配置异常
      *
-     * @param logLevel 日志等级
-     * @param msg      日志和异常消息
+     * @param logLevel   日志等级
+     * @param messageKey 日志和异常消息的翻译键
+     * @param args       翻译文本的格式化参数
      * */
-    private void logAndThrow(@NonNull Level logLevel, @NonNull String msg) throws ConfigException {
+    private void logAndThrow(@NonNull Level logLevel, @NonNull String messageKey, Object... args) throws ConfigException {
+        String msg = ServerLanguageService.translate(messageKey, args);
         logger.log(logLevel, msg);
         throw new ConfigException(msg, null);
     }
@@ -231,7 +239,8 @@ public class Config implements Module {
         try {
             defaults.save(target);
         } catch (IOException e) {
-            String msg = "由配置键定义生成默认配置文件 '" + target.getAbsolutePath() + "' 失败";
+            String msg = ServerLanguageService.translate(
+                    TranslateKeys.Log.CONFIG_MATERIALIZE_FAILED, target.getAbsolutePath());
             logger.log(Level.SEVERE, msg, e);
             throw new ConfigException(msg, e, null);
         }

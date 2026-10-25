@@ -1,18 +1,28 @@
 package io.github.hhn756.voidairrace.addons.script.api.handle;
 
+import io.github.hhn756.voidairrace.Voidairrace;
+import io.github.hhn756.voidairrace.addons.script.MutationAccess;
 import io.github.hhn756.voidairrace.addons.script.PackageAccess;
 import io.github.hhn756.voidairrace.addons.script.api.ArenaApi;
+import io.github.hhn756.voidairrace.addons.script.simplevalue.BlockPos;
+import io.github.hhn756.voidairrace.addons.script.simplevalue.Position;
+import io.github.hhn756.voidairrace.addons.script.simplevalue.Rotation;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
+import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.util.lua.ApiArgs;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
 import io.github.hhn756.voidairrace.service.arena.ArenaToken;
+import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.LuaRuntimeException;
 import net.sandius.rembulan.Table;
 import net.sandius.rembulan.impl.NonsuspendableFunctionException;
-import net.sandius.rembulan.runtime.*;
+import net.sandius.rembulan.runtime.AbstractFunction0;
+import net.sandius.rembulan.runtime.AbstractFunction1;
+import net.sandius.rembulan.runtime.AbstractFunctionAnyArg;
+import net.sandius.rembulan.runtime.ExecutionContext;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Chest;
@@ -22,6 +32,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.WeakHashMap;
 import java.util.function.Function;
 
 /**
@@ -44,7 +55,7 @@ public final class ArenaHandle {
      * 句柄表 → 句柄实例的反查（弱键：Lua 侧引用消失后条目随之回收）<br>
      * 比赛句柄 widen 时凭脚本传来的表反查句柄实例；显式归还与包清扫时移除
      */
-    private static final java.util.WeakHashMap<@NonNull Table, @NonNull ArenaHandle> BY_TABLE = new java.util.WeakHashMap<>();
+    private static final WeakHashMap<@NonNull Table, @NonNull ArenaHandle> BY_TABLE = new WeakHashMap<>();
 
     /** 借据所属包（竞技场模板路径解析基准） */
     private final @NonNull UsrPackage pkg;
@@ -136,8 +147,9 @@ public final class ArenaHandle {
         } else {
             // 已登记为比赛区域的借据走不到归还（被管理器拒绝），留给比赛结束流程；
             // 其余失败（借据失效等）记日志即可
-            io.github.hhn756.voidairrace.VoidAirRace.getInstance().getLogger().warning(
-                    "包清扫时归还竞技场未成功：" + result.techMessage());
+            Voidairrace.getInstance().getLogger().warning(
+                    ServerLanguageService.translate(
+                            TranslateKeys.Log.ARENA_HANDLE_CLEANUP_RETURN_FAILED, result.techMessage()));
         }
     }
 
@@ -158,6 +170,7 @@ public final class ArenaHandle {
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
             ArenaToken token = handle.requireToken();
+            MutationAccess.requireArena(handle.pkg, token);
             String spec = ApiArgs.expectString(arg1, "arena.load：第 1 个参数（模板路径）");
             PackageAccess.Target target = PackageAccess.resolve(handle.pkg, spec, handle.packageResolver);
             Path templateDir = target.pkg().resolve(target.relPath());
@@ -211,10 +224,11 @@ public final class ArenaHandle {
     }
 
     /**
-     * {@code arena.teleport(uuid, x, y, z)}：把玩家传送到本竞技场世界内的指定坐标<br>
-     * {@code uuid} 为玩家 UUID 字符串；坐标为竞技场世界内的世界坐标
+     * {@code arena.teleport(uuid, pos[, rot])}：把玩家传送到本竞技场世界内的指定坐标<br>
+     * {@code pos} 为坐标表 {@code {x=, y=, z=}}；{@code rot} 可选，为朝向表
+     * {@code {yaw=, pitch=}}，省略时保留玩家当前朝向
      * */
-    private static final class Teleport extends AbstractFunction4 {
+    private static final class Teleport extends AbstractFunctionAnyArg {
         private final @NonNull ArenaHandle handle;
 
         Teleport(@NonNull ArenaHandle handle) {
@@ -222,15 +236,24 @@ public final class ArenaHandle {
         }
 
         @Override
-        public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1, @Nullable Object arg2,
-                           @Nullable Object arg3, @Nullable Object arg4) {
+        public void invoke(@NonNull ExecutionContext context, @NonNull Object[] args) {
+            MutationAccess.requireArena(handle.pkg, handle.requireToken());
             World world = handle.requireWorld();
-            Player player = MatchHandle.findPlayer(arg1, "arena.teleport：第 1 个参数（玩家 UUID）");
-            double x = ApiArgs.expectDouble(arg2, "arena.teleport：第 2 个参数（x）");
-            double y = ApiArgs.expectDouble(arg3, "arena.teleport：第 3 个参数（y）");
-            double z = ApiArgs.expectDouble(arg4, "arena.teleport：第 4 个参数（z）");
+            if (args.length < 2 || args.length > 3) {
+                throw new LuaRuntimeException("arena.teleport：参数应为 (uuid, pos[, rot])");
+            }
+            Player player = MatchHandle.findPlayer(args[0], "arena.teleport：第 1 个参数（玩家 UUID）");
+            MutationAccess.requirePlayer(handle.pkg, player);
+            Position pos = Position.expect(args[1], "arena.teleport：第 2 个参数（pos）");
+            Location target = new Location(world, pos.x(), pos.y(), pos.z());
+            if (args.length == 3) {
+                Rotation rot = Rotation.expect(
+                        args[2], "arena.teleport：第 3 个参数（rot）");
+                target.setYaw(rot.yaw());
+                target.setPitch(rot.pitch());
+            }
 
-            player.teleport(new Location(world, x, y, z));
+            player.teleport(target);
             context.getReturnBuffer().setTo();
         }
 
@@ -241,10 +264,11 @@ public final class ArenaHandle {
     }
 
     /**
-     * {@code arena.clear_chest(x, y, z)}：清空本竞技场世界内指定坐标的容器<br>
-     * 坐标须为箱子方块；战利品表设置不在本期开放（容器仅支持清空）
+     * {@code arena.clear_chest(pos)}：清空本竞技场世界内指定方块的容器<br>
+     * {@code pos} 为坐标表，按向下取整落到方块网格（负数不会朝零截断）；
+     * 坐标须为箱子方块。战利品表设置不在本期开放（容器仅支持清空）
      * */
-    private static final class ClearChest extends AbstractFunction3 {
+    private static final class ClearChest extends AbstractFunction1 {
         private final @NonNull ArenaHandle handle;
 
         ClearChest(@NonNull ArenaHandle handle) {
@@ -252,15 +276,14 @@ public final class ArenaHandle {
         }
 
         @Override
-        public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1,
-                           @Nullable Object arg2, @Nullable Object arg3) {
+        public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
+            MutationAccess.requireArena(handle.pkg, handle.requireToken());
             World world = handle.requireWorld();
-            int x = (int) ApiArgs.expectDouble(arg1, "arena.clear_chest：第 1 个参数（x）");
-            int y = (int) ApiArgs.expectDouble(arg2, "arena.clear_chest：第 2 个参数（y）");
-            int z = (int) ApiArgs.expectDouble(arg3, "arena.clear_chest：第 3 个参数（z）");
+            BlockPos pos = BlockPos.expect(
+                    arg1, "arena.clear_chest：第 1 个参数（pos）");
 
-            if (!(world.getBlockAt(x, y, z).getState() instanceof Chest chest)) {
-                throw new LuaRuntimeException("该位置不是箱子：" + x + ", " + y + ", " + z);
+            if (!(world.getBlockAt(pos.x(), pos.y(), pos.z()).getState() instanceof Chest chest)) {
+                throw new LuaRuntimeException("该位置不是箱子：" + pos.x() + ", " + pos.y() + ", " + pos.z());
             }
             chest.getInventory().clear(); // 清空箱子，避免残留
             chest.update();

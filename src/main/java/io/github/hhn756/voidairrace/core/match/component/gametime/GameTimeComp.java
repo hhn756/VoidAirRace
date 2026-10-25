@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.core.match.component.gametime;
 
-import io.github.hhn756.voidairrace.VoidAirRace;
+import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.ComponentPriority;
 import io.github.hhn756.voidairrace.core.match.DataKey;
@@ -97,7 +97,7 @@ public class GameTimeComp extends MatchComp
         remaining = initialTime;
 
         tickTask = Bukkit.getScheduler().runTaskTimer(
-                VoidAirRace.getInstance(),
+                Voidairrace.getInstance(),
                 () -> {
                     if (timeFlow && remaining > 0) {
                         setRemaining(remaining - 1);

@@ -1,6 +1,7 @@
 package io.github.hhn756.voidairrace.addons.script.api;
 
 import io.github.hhn756.voidairrace.addons.script.api.handle.MatchHandle;
+import io.github.hhn756.voidairrace.addons.script.simplevalue.Position;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerStateManager;
 import io.github.hhn756.voidairrace.core.playerstatemanager.systems.StateSystem;
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
@@ -33,7 +34,6 @@ import java.util.UUID;
  * */
 public final class PlayerApi {
     /** 无状态函数对象：不持有包、句柄或状态上下文，跨包共享同一实例 */
-    private static final Position POSITION = new Position();
     private static final TeamOf TEAM_OF = new TeamOf();
     private static final Online ONLINE = new Online();
     private static final PlayStateQuery PLAY_STATE = new PlayStateQuery();
@@ -49,7 +49,7 @@ public final class PlayerApi {
      * */
     public static void installInto(@NonNull StateContext stateContext, @NonNull Table env) {
         Table player = stateContext.newTable();
-        player.rawset(ByteString.of("position"), POSITION);
+        player.rawset(ByteString.of("position"), new PositionQuery(stateContext));
         player.rawset(ByteString.of("team_of"), TEAM_OF);
         player.rawset(ByteString.of("online"), ONLINE);
         player.rawset(ByteString.of("play_state"), PLAY_STATE);
@@ -58,14 +58,22 @@ public final class PlayerApi {
 
     /**
      * {@code player.position(uuid)}：查询玩家位置<br>
-     * 返回玩家所在世界坐标 (x, y, z) 三个值
+     * 返回坐标表 {@code {x=, y=, z=}}（浮点，所在世界坐标）
      * */
-    private static final class Position extends AbstractFunction1 {
+    private static final class PositionQuery extends AbstractFunction1 {
+        /** 共享 Lua 状态上下文（返回坐标表时建表用） */
+        private final @NonNull StateContext stateContext;
+
+        PositionQuery(@NonNull StateContext stateContext) {
+            this.stateContext = stateContext;
+        }
+
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
             Player player = MatchHandle.findPlayer(arg1, "player.position：第 1 个参数（玩家 UUID）");
             Location loc = player.getLocation();
-            context.getReturnBuffer().setTo(loc.x(), loc.y(), loc.z());
+            context.getReturnBuffer().setTo(Position.toLua(
+                    stateContext, new Position(loc.x(), loc.y(), loc.z())));
         }
 
         @Override
