@@ -1,6 +1,5 @@
-package io.github.hhn756.voidairrace.addons.script;
+package io.github.hhn756.voidairrace.addons.script.simplevalue;
 
-import io.github.hhn756.voidairrace.addons.script.simplevalue.NamespaceKey;
 import io.github.hhn756.voidairrace.infrastructure.util.lua.ApiArgs;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.*;
@@ -238,16 +237,24 @@ public final class TextComponents {
     private static @NonNull TextColor parseColor(@NonNull String colorName, @NonNull String what) {
         NamedTextColor named = NamedTextColor.NAMES.value(colorName.toLowerCase(Locale.ROOT));
         if (named != null) return named;
+        // fromHexString 对非法输入返回 null（部分版本抛异常），两种情况都按非法颜色处理——
+        // 不能把 null 交给 component.color()，那等于“没设颜色”，非法输入会被静默接受
+        TextColor hex;
         try {
-            return TextColor.fromHexString(colorName);
-        } catch (Exception ignored) {
-            // fall through 到统一错误
+            hex = TextColor.fromHexString(colorName);
+        } catch (IllegalArgumentException ignored) {
+            hex = null;
         }
+        if (hex != null) return hex;
         throw new LuaRuntimeException(what + "的字段 “color” 非法：\"" + colorName
                 + "\"（可用颜色名或 #RRGGBB）");
     }
 
-    /** click_event：{@code action} 闭集校验 + {@code value} 类型随动作校验 */
+    /**
+     * click_event：{@code action} 闭集校验 + {@code value} 类型随动作校验<br>
+     * 不开放 {@code open_file}：Minecraft 客户端协议不允许该点击事件，组件能构造但在发包时
+     * 会被服务端序列化器拒绝，导致消息发不出去、客户端断线
+     * */
     private static @NonNull Component applyClickEvent(
             @NonNull Component component, @NonNull Table table, @NonNull String what) {
         Object raw = table.rawget(ByteString.of("click_event"));
@@ -260,8 +267,6 @@ public final class TextComponents {
         ClickEvent click = switch (action) {
             case "open_url" -> ClickEvent.openUrl(
                     requireUrl(event, path));
-            case "open_file" -> ClickEvent.openFile(
-                    ApiArgs.expectString(event.rawget(ByteString.of("value")), path + "的字段 “value”"));
             case "run_command" -> ClickEvent.runCommand(
                     ApiArgs.expectString(event.rawget(ByteString.of("value")), path + "的字段 “value”"));
             case "suggest_command" -> ClickEvent.suggestCommand(
@@ -271,7 +276,7 @@ public final class TextComponents {
             case "copy_to_clipboard" -> ClickEvent.copyToClipboard(
                     ApiArgs.expectString(event.rawget(ByteString.of("value")), path + "的字段 “value”"));
             default -> throw new LuaRuntimeException(path + "的字段 “action” 非法：\"" + action
-                    + "\"（可用：open_url / open_file / run_command / suggest_command / change_page / copy_to_clipboard）");
+                    + "\"（可用：open_url / run_command / suggest_command / change_page / copy_to_clipboard）");
         };
         return component.clickEvent(click);
     }

@@ -1,6 +1,8 @@
 package io.github.hhn756.voidairrace.addons.script.api.event;
 
 import io.github.hhn756.voidairrace.addons.script.simplevalue.Position;
+import io.github.hhn756.voidairrace.core.match.Match;
+import io.github.hhn756.voidairrace.core.match.MatchCoordinator;
 import net.sandius.rembulan.ByteString;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -13,6 +15,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,26 +47,27 @@ final class PlayerEventBridge implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(@NonNull PlayerJoinEvent event) {
-        api.dispatch(ScriptEvent.PLAYER_JOIN, uuid(event.getPlayer()));
+        api.dispatch(ScriptEvent.PLAYER_JOIN, currentMatch(), true, uuid(event.getPlayer()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(@NonNull PlayerQuitEvent event) {
         Player player = event.getPlayer();
         lastMoveAt.remove(player.getUniqueId());
-        api.dispatch(ScriptEvent.PLAYER_QUIT, uuid(player));
+        api.dispatch(ScriptEvent.PLAYER_QUIT, currentMatch(), true, uuid(player));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(@NonNull PlayerDeathEvent event) {
         Player victim = event.getEntity();
         Player killer = victim.getKiller();
-        api.dispatch(ScriptEvent.PLAYER_DEATH, uuid(victim), killer == null ? null : uuid(killer));
+        api.dispatch(ScriptEvent.PLAYER_DEATH, currentMatch(), true,
+                uuid(victim), killer == null ? null : uuid(killer));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(@NonNull PlayerRespawnEvent event) {
-        api.dispatch(ScriptEvent.PLAYER_RESPAWN, uuid(event.getPlayer()));
+        api.dispatch(ScriptEvent.PLAYER_RESPAWN, currentMatch(), true, uuid(event.getPlayer()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -87,9 +91,14 @@ final class PlayerEventBridge implements Listener {
         if (last != null && now - last < MOVE_INTERVAL_MS) return;
         lastMoveAt.put(player.getUniqueId(), now);
 
-        api.dispatch(ScriptEvent.PLAYER_MOVE, uuid(player),
+        api.dispatch(ScriptEvent.PLAYER_MOVE, currentMatch(), true, uuid(player),
                 Position.toLua(api.stateContext(),
                         new Position(to.getX(), to.getY(), to.getZ())));
+    }
+
+    /** 当前比赛（无比赛时为 {@code null}）：玩家事件不属于某一场比赛，只取当前那一场作为上下文 */
+    private static @Nullable Match currentMatch() {
+        return MatchCoordinator.getInstance().getCurrentMatch();
     }
 
     /** 玩家 UUID → Lua 字符串（事件载荷统一用值） */

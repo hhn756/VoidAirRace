@@ -61,6 +61,55 @@ public final class PackageAccess {
     public record Target(@NonNull UsrPackage pkg, @NonNull String relPath) {}
 
     /**
+     * 包访问目标：所属包 + 去掉包前缀后的原始路径串（仍须由调用方按自己的语法白名单校验）<br>
+     * 供路径语法各不相同的访问类别共用同一套包 Id 语法与依赖裁定
+     * */
+    public record Owner(@NonNull UsrPackage pkg, @NonNull String relPath) {}
+
+    /**
+     * 解析访问目标所属的包：{@code spec} 为{@code path}（本包）或{@code pkgid:path}
+     * （跨包，目标包须为调用方直接声明的依赖且已加载）<br>
+     * 仅裁定包归属，不校验路径语法
+     *
+     * @param caller   发起访问的包（决定依赖白名单）
+     * @param spec     原始路径串（含或不含{@code pkgid:}前缀）
+     * @param resolver 包 Id → 已加载包对象的解析函数，查无此包返回{@code null}
+     * @param label    访问类别的名称（如「资源路径」），仅用于错误消息
+     *
+     * @return 所属包 + 去掉包前缀后的路径串
+     * */
+    public static @NonNull Owner resolveOwner(
+            @NonNull UsrPackage caller,
+            @NonNull String spec,
+            @NonNull Function<@NonNull String, @Nullable UsrPackage> resolver,
+            @NonNull String label
+    ) {
+        int separator = spec.indexOf(':');
+        if (separator < 0) {
+            // 无前缀 = 访问本包
+            return new Owner(caller, spec);
+        }
+        String pkgId = spec.substring(0, separator);
+        String relPath = spec.substring(separator + 1);
+        if (!PKG_ID.matcher(pkgId).matches()) {
+            throw new LuaRuntimeException(label + "中的包 Id 非法：" + spec);
+        }
+        if (pkgId.equals(caller.id())) {
+            return new Owner(caller, relPath);
+        }
+        // 跨包：引用谁的资源就声明依赖谁的包（直接依赖，不含传递闭包）
+        if (!caller.dependencies().contains(pkgId)) {
+            throw new LuaRuntimeException(label + "的目标包未声明为依赖：" + spec
+                    + "（允许的范围：" + caller.dependencies() + "）");
+        }
+        UsrPackage target = resolver.apply(pkgId);
+        if (target == null) {
+            throw new LuaRuntimeException(label + "的目标包未加载：" + spec);
+        }
+        return new Owner(target, relPath);
+    }
+
+    /**
      * 解析资源访问目标<br>
      * {@code spec} 为{@code path}（本包）或{@code pkgid:path}（跨包，目标包须为调用方直接声明的依赖且已加载）；
      * 包 Id 非法、路径语法非法或跨包越权即抛 Lua 错误
@@ -76,38 +125,12 @@ public final class PackageAccess {
             @NonNull String spec,
             @NonNull Function<@NonNull String, @Nullable UsrPackage> resolver
     ) {
-        UsrPackage target;
-        String relPath;
-        int separator = spec.indexOf(':');
-        if (separator < 0) {
-            // 无前缀 = 访问本包
-            target = caller;
-            relPath = spec;
-        } else {
-            String pkgId = spec.substring(0, separator);
-            relPath = spec.substring(separator + 1);
-            if (!PKG_ID.matcher(pkgId).matches()) {
-                throw new LuaRuntimeException("资源路径的包 Id 非法：" + spec);
-            }
-            if (pkgId.equals(caller.id())) {
-                target = caller;
-            } else {
-                // 跨包：引用谁的资源就声明依赖谁的包（直接依赖，不含传递闭包）
-                if (!caller.dependencies().contains(pkgId)) {
-                    throw new LuaRuntimeException("资源访问的目标包未声明为依赖：" + spec
-                            + "（允许的范围：" + caller.dependencies() + "）");
-                }
-                target = resolver.apply(pkgId);
-                if (target == null) {
-                    throw new LuaRuntimeException("资源访问的目标包未加载：" + spec);
-                }
-            }
-        }
-        if (!REL_PATH.matcher(relPath).matches()) {
+        Owner owner = resolveOwner(caller, spec, resolver, "资源路径");
+        if (!REL_PATH.matcher(owner.relPath()).matches()) {
             throw new LuaRuntimeException("资源路径语法非法（只允许小写字母、数字、下划线、连字符、"
                     + "点分扩展名，以 / 分隔）：" + spec);
         }
-        return new Target(target, relPath);
+        return new Target(owner.pkg(), owner.relPath());
     }
 
     /**

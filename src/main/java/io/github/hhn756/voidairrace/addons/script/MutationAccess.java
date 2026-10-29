@@ -15,6 +15,7 @@ import io.github.hhn756.voidairrace.core.matchrule.RuleComp;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
 import io.github.hhn756.voidairrace.service.arena.ArenaToken;
 import net.sandius.rembulan.LuaRuntimeException;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
 
@@ -70,6 +71,27 @@ public final class MutationAccess {
     }
 
     /**
+     * 按世界校验竞技场资源的修改权<br>
+     * 世界不是竞技场世界时直接放行（玩家在大厅等场所的活动没有来源竞技场可校验）；
+     * 是竞技场世界时要求调用方是该竞技场的当前借入者
+     *
+     * @param pkg   发起修改的包
+     * @param world 资源所在的世界
+     * */
+    public static void requireArenaWorld(@NonNull UsrPackage pkg, @NonNull World world) {
+        ArenaManager manager = ArenaManager.getInstance();
+        if (!manager.isArenaWorld(world)) return;
+
+        String borrower = manager.borrowerOfWorld(world);
+        if (borrower == null) {
+            throw new LuaRuntimeException("竞技场借据无效，不能修改");
+        }
+        if (!borrower.equals(pkg.id())) {
+            throw new LuaRuntimeException("竞技场不属于当前包，不能修改（借入者：" + borrower + "）");
+        }
+    }
+
+    /**
      * 校验玩家的修改权<br>
      * 目标必须是调用方所发起比赛的参赛者（存活或已淘汰）；
      * 没有进行中的比赛、比赛不是调用方发起、目标不在参赛者之列，均抛 Lua 错误
@@ -103,14 +125,25 @@ public final class MutationAccess {
         if (match == null || (match.state() != MatchState.STARTING && match.state() != MatchState.IN_PROGRESS)) {
             throw new LuaRuntimeException("当前没有进行中的比赛，不能修改比赛内资源");
         }
-        MapComp.MapConfig config = match.config().dataOf(MapComp.CONFIG_KEY);
-        if (config == null) {
-            throw new LuaRuntimeException("比赛地图配置缺失，不能修改比赛内资源");
-        }
-        if (!ownsMatch(match, config, pkg)) {
+        if (!hasMatchAuthority(match, pkg)) {
             throw new LuaRuntimeException("比赛不属于当前包，不能修改比赛内资源");
         }
         return match;
+    }
+
+    /**
+     * 判断指定包对指定比赛是否拥有修改权（不要求比赛处于活动阶段）<br>
+     * 两条来源同{@link #ownsMatch}：注册本场地图的包；本场已启用 Lua 规则的来源包
+     *
+     * @param match 目标比赛
+     * @param pkg   待判定的包
+     *
+     * @return 有修改权时为{@code true}
+     * */
+    public static boolean hasMatchAuthority(@NonNull Match match, @NonNull UsrPackage pkg) {
+        MapComp.MapConfig config = match.config().dataOf(MapComp.CONFIG_KEY);
+        if (config == null) return false;
+        return ownsMatch(match, config, pkg);
     }
 
     /**

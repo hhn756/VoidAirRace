@@ -22,27 +22,28 @@ final class MatchEventBridge implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onMatchStarted(@NonNull MatchStartedEvent event) {
-        api.dispatch(ScriptEvent.MATCH_START);
+        api.dispatch(ScriptEvent.MATCH_START, event.getMatch(), false);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onMatchStatusChanged(@NonNull MatchStatusChangedEvent event) {
-        api.dispatch(ScriptEvent.MATCH_STATE_CHANGED, ByteString.of(event.getMatch().state().name()));
+    public void onMatchTimeExpired(@NonNull MatchTimeExpiredEvent event) {
+        api.dispatch(ScriptEvent.MATCH_TIME_EXPIRED, event.getMatch(), false);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoinMatch(@NonNull PlayerJoinMatchEvent event) {
-        api.dispatch(ScriptEvent.PLAYER_JOIN_MATCH, uuid(event.getPlayer()));
+        api.dispatch(ScriptEvent.PLAYER_JOIN_MATCH, event.getMatch(), false, uuid(event.getPlayer()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerLeaveMatch(@NonNull PlayerLeaveMatchEvent event) {
-        api.dispatch(ScriptEvent.PLAYER_LEAVE_MATCH, uuid(event.getPlayer()));
+        api.dispatch(ScriptEvent.PLAYER_LEAVE_MATCH, event.getMatch(), false, uuid(event.getPlayer()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onMatchOver(@NonNull MatchOverEvent event) {
-        api.dispatch(ScriptEvent.MATCH_OVER);
+        // 收尾阶段：比赛已进入 ENDING，句柄只放行查询
+        api.dispatch(ScriptEvent.MATCH_OVER, event.getMatch(), true);
     }
 
     /** 玩家 UUID → Lua 字符串（事件载荷统一用值） */

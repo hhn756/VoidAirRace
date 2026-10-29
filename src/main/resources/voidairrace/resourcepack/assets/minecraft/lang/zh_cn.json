@@ -97,6 +97,16 @@
   "void_air_race.command.match_cmd.set_map.success": "已将比赛地图设置为 %s (%s)",
   "void_air_race.command.match_cmd.get_map.success": "当前比赛地图为 %s (%s)",
 
+  "void_air_race.command.team.player_only": "只有玩家可以执行这条命令",
+  "void_air_race.command.team.not_free": "你当前不在空闲状态，不能选择队伍",
+  "void_air_race.command.team.not_in_lobby": "你不在大厅世界，不能选择队伍",
+  "void_air_race.command.team.no_available_teams": "当前地图没有可选的队伍",
+  "void_air_race.command.team.unknown": "未知的队伍：%s（可用：%s）",
+  "void_air_race.command.team.current.none": "你当前没有加入任何队伍",
+  "void_air_race.command.team.current.team": "当前队伍：%s",
+  "void_air_race.command.team.join.success": "已加入队伍 %s",
+  "void_air_race.command.team.leave.success": "已退出当前队伍",
+
   "void_air_race.command.game_map.reinit.id_format_error": "地图 ID 格式错误",
   "void_air_race.command.match_cmd.set_map.id_format_error": "地图 ID 格式错误",
   "void_air_race.command.match_cmd.get_map.default_map_name": "草原",
@@ -106,6 +116,31 @@
   "void_air_race.command.player_manager.init.get.no": "玩家 %s 未初始化",
   "void_air_race.command.player_manager.init.reinit.null_player": "未找到名为 %s 的玩家",
   "void_air_race.command.player_manager.init.reinit.ok": "已成功重新初始化玩家 %s",
+
+  "void_air_race.command.usr_package.list.start": "=== 用户包列表 ===",
+  "void_air_race.command.usr_package.list.entry_loaded": "[已加载] %s（%s）",
+  "void_air_race.command.usr_package.list.entry_unloaded": "[未加载] %s（%s）",
+  "void_air_race.command.usr_package.list.entry_unidentified": "[元文件无法识别] %s",
+  "void_air_race.command.usr_package.list.empty": "（没有符合条件的用户包）",
+  "void_air_race.command.usr_package.list.end": "=== 列表结束 ===",
+
+  "void_air_race.command.usr_package.elements.start": "=== 用户包 %s 注册的游戏元素 ===",
+  "void_air_race.command.usr_package.elements.entry": "[%s] %s（ID：%s）",
+  "void_air_race.command.usr_package.elements.empty": "（没有符合条件的元素）",
+  "void_air_race.command.usr_package.elements.end": "=== 列表结束 ===",
+  "void_air_race.command.usr_package.elements.package_not_loaded": "用户包 %s 未加载，无法列出它注册的元素",
+  "void_air_race.command.usr_package.elements.unknown_type": "未知的元素类型 %s（可用类型：%s）",
+
+  "void_air_race.command.usr_package.enable.already_loaded": "用户包 %s 已经加载",
+  "void_air_race.command.usr_package.enable.package_not_found": "用户包目录中未找到 Id 为 %s 的包",
+  "void_air_race.command.usr_package.enable.config_save_failed": "写入用户包启用列表失败，未启用用户包 %s",
+  "void_air_race.command.usr_package.enable.failed": "启用用户包 %s 失败",
+  "void_air_race.command.usr_package.enable.success": "已启用用户包 %s",
+
+  "void_air_race.command.usr_package.disable.not_enabled": "用户包 %s 既未启用也未加载",
+  "void_air_race.command.usr_package.disable.config_save_failed": "写入用户包启用列表失败，未禁用用户包 %s",
+  "void_air_race.command.usr_package.disable.failed": "禁用用户包 %s 失败",
+  "void_air_race.command.usr_package.disable.success": "已禁用用户包 %s",
 
   "void_air_race.audio_visual_services.game_time_bossbar.bossbar_name": "剩余时间：%s 秒",
   "void_air_race.audio_visual_services.login_message.line1": "%s 加入了游戏",
@@ -190,6 +225,10 @@
   "void_air_race.log.config.fill_missing_failed": "补齐配置文件 '%s' 缺失字段后保存或重载失败",
   "void_air_race.log.config.materialize_failed": "由配置键定义生成默认配置文件 '%s' 失败",
 
+  "void_air_race.log.package_config.load_failed": "无法加载用户包配置 “%s”",
+  "void_air_race.log.package_config.save_failed": "无法保存用户包配置 “%s”",
+  "void_air_race.log.package_config.delete_failed": "无法删除用户包配置文件 “%s”",
+
   "void_air_race.log.class_scanner.scan_failed": "扫描插件类失败",
   "void_air_race.log.class_scanner.index_class_unloadable": "无法加载子类索引中的类 %s：%s",
   "void_air_race.log.class_scanner.runtime_scan_failed": "运行时扫描类失败",
@@ -261,6 +300,7 @@
   "void_air_race.log.arena_handle.cleanup_return_failed": "包清扫时归还竞技场未成功：%s",
   "void_air_race.log.event_api.callback_failed": "包 %s 的事件回调出错（事件 %s）：%s",
   "void_air_race.log.lua_map.on_over_failed": "用户地图 on_over 调用失败：%s（%s）",
+  "void_air_race.log.lua_map.on_tick_failed": "用户地图 on_tick 调用失败：%s（%s）",
   "void_air_race.log.lua_rule.callback_failed": "用户规则的 %s 回调调用失败：%s（%s）",
   "void_air_race.log.register_api.map_registered": "用户包 %s 注册地图：%s",
   "void_air_race.log.register_api.rule_registered": "用户包 %s 注册比赛规则：%s",
@@ -268,5 +308,8 @@
   "void_air_race.log.package_manager.unloaded": "已卸载用户包 %s（来源：%s）：注销地图 %s，规则 %s，标签 %s",
   "void_air_race.log.script.output": "[用户包脚本] %s",
   "void_air_race.log.command.match_start_failed": "开始比赛失败：%s",
-  "void_air_race.log.command.match_stop_failed": "结束比赛失败：%s"
+  "void_air_race.log.command.match_stop_failed": "结束比赛失败：%s",
+  "void_air_race.log.command.usr_package_load_failed": "启用用户包 %s 失败：%s",
+  "void_air_race.log.command.usr_package_unload_failed": "禁用用户包 %s 失败：%s",
+  "void_air_race.log.command.usr_package_config_save_failed": "写入用户包启用列表失败：%s"
 }

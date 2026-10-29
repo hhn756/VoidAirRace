@@ -1,5 +1,10 @@
-package io.github.hhn756.voidairrace.addons.script.api;
+package io.github.hhn756.voidairrace.addons.script;
 
+import io.github.hhn756.voidairrace.addons.script.api.PlayerApi;
+import io.github.hhn756.voidairrace.addons.script.api.ResourceApi;
+import io.github.hhn756.voidairrace.addons.script.api.ServerApi;
+import io.github.hhn756.voidairrace.addons.script.api.arena.ArenaApi;
+import io.github.hhn756.voidairrace.addons.script.api.config.ConfigApi;
 import io.github.hhn756.voidairrace.addons.script.api.event.EventApi;
 import io.github.hhn756.voidairrace.addons.script.api.register.RegisterApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
@@ -17,19 +22,6 @@ import java.util.function.Function;
  * 插件脚本 API 的装配协调器：把插件提供的全局表装入包环境（{@code _G}），并注入
  * 元数据表——本类不承载任何函数实现
  * <p>
- * 装入的全局表（函数按类别归表，各类别入口类所在包见括号标注）：
- * <ul>
- *     <li>{@code voidairrace}：插件元数据——目前仅{@code api_version}（API 版本号常量），
- *         根表不承载任何函数</li>
- *     <li>{@code player}：玩家查询 —— {@code position} / {@code team_of}（{@code api}）</li>
- *     <li>{@code event}：引擎事件订阅 —— {@code on} / {@code off}（{@code api}）</li>
- *     <li>{@code arena}：竞技场借用 —— {@code borrow}（{@code api}）</li>
- *     <li>{@code server}：服务器级操作 —— {@code broadcast}（{@code api}）</li>
- *     <li>{@code register}：元素注册 —— {@code map} / {@code rule} / {@code tag}
- *         （{@code api.register}）</li>
- *     <li>{@code resource}：资源访问 —— {@code read_asset} / {@code list_assets}
- *         （{@code api}）</li>
- * </ul>
  * 「不随意操作」的边界即这套全局表的整体：表上没有的操作脚本做不了。
  * 各类别入口的统一装配约定：静态方法{@code installInto(...)}把本类别表注入目标环境。
  * 函数对象分两类：无状态的（不持有包、句柄或状态上下文）共用一份常量实例；
@@ -68,5 +60,6 @@ public final class PluginApi {
         ServerApi.installInto(stateContext, env);
         RegisterApi.installInto(stateContext, chunkClassLoader, pkg, env);
         ResourceApi.installInto(stateContext, pkg, packageResolver, env);
+        ConfigApi.installInto(stateContext, pkg, packageResolver, env);
     }
 }

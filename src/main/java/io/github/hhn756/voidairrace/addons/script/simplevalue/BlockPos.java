@@ -1,6 +1,8 @@
 package io.github.hhn756.voidairrace.addons.script.simplevalue;
 
 import io.github.hhn756.voidairrace.infrastructure.util.lua.ApiArgs;
+import net.sandius.rembulan.ByteString;
+import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.Table;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -25,6 +27,22 @@ public record BlockPos(int x, int y, int z) {
                 floorToInt(ApiArgs.expectDoubleField(table, "x", what), "x", what),
                 floorToInt(ApiArgs.expectDoubleField(table, "y", what), "y", what),
                 floorToInt(ApiArgs.expectDoubleField(table, "z", what), "z", what));
+    }
+
+    /**
+     * 把方块坐标写成 Lua 坐标表
+     *
+     * @param stateContext 共享 Lua 状态上下文（建表用）
+     * @param pos          方块坐标
+     *
+     * @return 键为 {@code x} / {@code y} / {@code z} 的 Lua 表，值为整数
+     * */
+    public static @NonNull Table toLua(@NonNull StateContext stateContext, @NonNull BlockPos pos) {
+        Table table = stateContext.newTable();
+        table.rawset(ByteString.of("x"), (long) pos.x());
+        table.rawset(ByteString.of("y"), (long) pos.y());
+        table.rawset(ByteString.of("z"), (long) pos.z());
+        return table;
     }
 
     /** 向下取整并检查落在 int 范围内：Minecraft 世界坐标远小于 int 上限，越界视为脚本错误 */

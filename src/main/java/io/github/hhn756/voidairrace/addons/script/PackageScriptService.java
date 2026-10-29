@@ -2,7 +2,6 @@ package io.github.hhn756.voidairrace.addons.script;
 
 import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.script.api.PackageRequire;
-import io.github.hhn756.voidairrace.addons.script.api.PluginApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.event.UsrPackageUnloadEvent;

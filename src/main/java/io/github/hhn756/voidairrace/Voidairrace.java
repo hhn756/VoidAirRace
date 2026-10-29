@@ -4,10 +4,10 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.modules.Modules;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -41,7 +41,7 @@ public class Voidairrace extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        getLogger().fine(ServerLanguageService.translate(TranslateKeys.Log.PLUGIN_DISABLING));
+        getLogger().fine(ServerLanguage.translate(TranslateKeys.Log.PLUGIN_DISABLING));
 
         // 按加载逆序卸载模块链
         Modules.unloadAll();

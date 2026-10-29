@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class GlobalSettingKey {
     /**
-     * 服务端语言：取值为 {@code service.language.Language} 中的语言代码<br>
+     * 服务端语言：取值为 {@code infrastructure.language.Language} 中的语言代码<br>
      * 值无法识别时回退到美式英语并记录警告
      * */
     public static final ConfigKey<String> LANGUAGE = new ConfigKey<>(

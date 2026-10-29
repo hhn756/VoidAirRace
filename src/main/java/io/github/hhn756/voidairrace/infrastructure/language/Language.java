@@ -1,4 +1,4 @@
-package io.github.hhn756.voidairrace.service.language;
+package io.github.hhn756.voidairrace.infrastructure.language;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;

@@ -47,7 +47,9 @@ public class RuleComp extends MatchComp
 
     @Override
     public int getInstallPriority() {
-        return ComponentPriority.EXTREMELY_LOW.getValue();
+        // 必须早于地图组件（LOW）：地图 on_start 是安装流程的一部分，回调里要能 enable_rule，
+        // 规则组件尚未就绪时该调用会因组件缺失而失败
+        return ComponentPriority.NORMAL.getValue();
     }
 
     @Override

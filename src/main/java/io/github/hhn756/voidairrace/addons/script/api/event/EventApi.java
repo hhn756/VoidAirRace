@@ -2,16 +2,17 @@ package io.github.hhn756.voidairrace.addons.script.api.event;
 
 import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
+import io.github.hhn756.voidairrace.addons.script.api.HandleApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
+import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.event.UsrPackageUnloadEvent;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.util.lua.ApiArgs;
 import io.github.hhn756.voidairrace.result.ValueResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.sandius.rembulan.ByteString;
-import net.sandius.rembulan.LuaRuntimeException;
 import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.Table;
 import net.sandius.rembulan.impl.NonsuspendableFunctionException;
@@ -36,9 +37,12 @@ import java.util.List;
  * 引擎事件的桥接派发与随包卸载的清扫——每包一个实例，实例随包生死
  * <p>
  * 事件桥接：每实例自注册一组按事件域拆分的 Bukkit 监听器（见{@link MatchEventBridge}、
- * {@link PlayerEventBridge}），收到引擎事件后向本包订阅者派发 Lua 回调
+ * {@link PlayerEventBridge}、{@link EntityEventBridge}），收到引擎事件后向本包订阅者派发 Lua 回调
  * （每次调用经{@link ScriptCallGate}独立计算指令预算）。回调抛错时记日志并广播原因，
  * 不自动终止比赛——全局回调不承担比赛推进职责，且比赛结束事件中触发 stop 存在重入风险
+ * <p>
+ * 比赛上下文：载荷末位追加比赛句柄；本包不是本场地图注册方、也没有在本场启用 Lua 规则时
+ * 该句柄只读（操作类函数抛错），查询不受影响
  * <p>
  * 清扫：监听{@link UsrPackageUnloadEvent}，包 Id 匹配即注销桥接监听器、清空订阅
  * */
@@ -66,7 +70,10 @@ public final class EventApi {
         this.pkg = pkg;
         this.stateContext = stateContext;
         this.chunkClassLoader = chunkClassLoader;
-        this.bridges = List.of(new MatchEventBridge(this), new PlayerEventBridge(this));
+        this.bridges = List.of(
+                new MatchEventBridge(this),
+                new PlayerEventBridge(this),
+                new EntityEventBridge(this));
         for (Listener bridge : bridges) {
             Bukkit.getPluginManager().registerEvents(bridge, Voidairrace.getInstance());
         }
@@ -138,16 +145,36 @@ public final class EventApi {
     }
 
     /**
-     * 向本包的某事件订阅者派发回调；每次调用独立计算指令预算，抛错时记日志并广播，不中断其他订阅者
+     * 向本包的某事件订阅者派发回调；每次调用独立计算指令预算，抛错时记日志并广播，不中断其他订阅者<br>
+     * {@code match} 非空时作为最后一个参数追加比赛句柄：本包对本场有修改权则为完整句柄，
+     * 否则为只读句柄（见{@link HandleApi#forEvent}）
+     *
+     * @param event       事件类型
+     * @param match       事件相关的比赛，无则为{@code null}（回调收到 {@code nil}）
+     * @param allowEnding 是否放行收尾阶段（{@code ENDING}）的查询
+     * @param args        事件载荷（按位置传入）
      * */
-    void dispatch(@NonNull ScriptEvent event, @Nullable Object... args) {
+    void dispatch(
+            @NonNull ScriptEvent event,
+            @Nullable Match match,
+            boolean allowEnding,
+            @Nullable Object... args
+    ) {
+        if (!hasSubscribers(event)) return;
+        Object matchArg = match == null
+                ? null
+                : HandleApi.forEvent(stateContext, match, pkg, allowEnding);
+        Object[] fullArgs = new Object[args.length + 1];
+        System.arraycopy(args, 0, fullArgs, 0, args.length);
+        fullArgs[args.length] = matchArg;
+
         for (Subscription sub : List.copyOf(subscriptions)) {
             if (sub.event() != event) continue;
             ValueResult<Object[]> result = ScriptCallGate.call(
-                    stateContext, chunkClassLoader, sub.callback(), args);
+                    stateContext, chunkClassLoader, sub.callback(), fullArgs);
             if (!result.hasValue()) {
                 Voidairrace.getInstance().getLogger().warning(
-                        ServerLanguageService.translate(
+                        ServerLanguage.translate(
                                 TranslateKeys.Log.EVENT_API_CALLBACK_FAILED,
                                 pkg.id(), event.eventName(), result.techMessage()));
                 Bukkit.getServer().broadcast(Component.text(
@@ -193,9 +220,7 @@ public final class EventApi {
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1, @Nullable Object arg2) {
             String eventName = ApiArgs.expectString(arg1, "event.on：第 1 个参数（事件名）");
-            if (!(arg2 instanceof LuaFunction callback)) {
-                throw new LuaRuntimeException("event.on：第 2 个参数（回调）必须是函数");
-            }
+            LuaFunction callback = ApiArgs.expectFunction(arg2, "event.on：第 2 个参数（回调）");
             api.subscribe(ScriptEvent.require(eventName), callback);
             context.getReturnBuffer().setTo();
         }
@@ -219,9 +244,7 @@ public final class EventApi {
 
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
-            if (!(arg1 instanceof LuaFunction callback)) {
-                throw new LuaRuntimeException("event.off：第 1 个参数（监听器函数）必须是函数");
-            }
+            LuaFunction callback = ApiArgs.expectFunction(arg1, "event.off：第 1 个参数（监听器函数）");
             api.unsubscribe(callback);
             context.getReturnBuffer().setTo();
         }

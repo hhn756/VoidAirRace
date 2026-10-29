@@ -8,9 +8,9 @@ import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.componentbase.CustomData;
 import io.github.hhn756.voidairrace.core.match.componentbase.EndableComp;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.jetbrains.annotations.Range;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -40,7 +40,7 @@ public class ScopeComp extends MatchComp
                 area.token().returnArena();
             } catch (Exception e) {
                 // 记录日志但不影响其他归还
-                logger.warning(ServerLanguageService.translate(
+                logger.warning(ServerLanguage.translate(
                         TranslateKeys.Log.SCOPE_COMP_RETURN_ARENA_FAILED,
                         area.token().getArenaId(), e.getMessage()));
             }

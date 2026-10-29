@@ -4,7 +4,7 @@ import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.addons.TagEntry;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
-import io.github.hhn756.voidairrace.addons.script.TextComponents;
+import io.github.hhn756.voidairrace.addons.script.simplevalue.TextComponents;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.Plugin;
@@ -12,10 +12,11 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.matchrule.RuleEntry;
 import io.github.hhn756.voidairrace.exception.RegistryException;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
+import io.github.hhn756.voidairrace.infrastructure.util.lua.ApiArgs;
 import io.github.hhn756.voidairrace.result.OperationResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.LuaRuntimeException;
 import net.sandius.rembulan.StateContext;
@@ -115,9 +116,10 @@ public final class RegisterApi {
         Long maxTeams = optPositiveLong(descriptor, "max_teams", "地图");
         if (maxTeams == null) throw new LuaRuntimeException("地图描述符的字段 “max_teams” 必填（正整数）");
 
-        // 行为回调（全部可选；未提供时开始/结束直接成功）
-        LuaFunction onStart = optFunction(descriptor, "on_start", "地图");
-        LuaFunction onOver = optFunction(descriptor, "on_over", "地图");
+        // 行为回调（全部可选；未提供时开始/结束直接成功，tick 直接空转）
+        LuaFunction onStart = ApiArgs.optFunctionField(descriptor, "on_start", "地图描述符");
+        LuaFunction onTick = ApiArgs.optFunctionField(descriptor, "on_tick", "地图描述符");
+        LuaFunction onOver = ApiArgs.optFunctionField(descriptor, "on_over", "地图描述符");
 
         // 登记：entry() 是构造注册项的唯一入口，工厂在每次实例化时产出全新的 LuaGameMap
         DefaultSubtable<MapEntry, NamespacedKey> subtable = Registry.getInstance().category(Categories.MAP);
@@ -128,6 +130,7 @@ public final class RegisterApi {
                     meta,
                     Math.toIntExact(maxTeams),
                     onStart,
+                    onTick,
                     onOver,
                     stateContext,
                     chunkClassLoader,
@@ -141,7 +144,7 @@ public final class RegisterApi {
         if (!addResult.isSuccess()) {
             throw new LuaRuntimeException("地图 id 已被注册：" + mapId);
         }
-        Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+        Voidairrace.getInstance().getLogger().info(ServerLanguage.translate(
                 TranslateKeys.Log.REGISTER_API_MAP_REGISTERED, pkg.id(), mapId));
     }
 
@@ -178,9 +181,9 @@ public final class RegisterApi {
         List<@NonNull NamespacedKey> tags = resolveTags(pkg, rawTags == null ? List.of() : rawTags, "规则");
 
         // 行为回调（全部可选；未提供时沿用 MatchRule 的默认生命周期行为）
-        LuaFunction onEnable = optFunction(descriptor, "on_enable", "规则");
-        LuaFunction onDisable = optFunction(descriptor, "on_disable", "规则");
-        LuaFunction tick = optFunction(descriptor, "tick", "规则");
+        LuaFunction onEnable = ApiArgs.optFunctionField(descriptor, "on_enable", "规则描述符");
+        LuaFunction onDisable = ApiArgs.optFunctionField(descriptor, "on_disable", "规则描述符");
+        LuaFunction tick = ApiArgs.optFunctionField(descriptor, "tick", "规则描述符");
 
         // 登记：add 失败即 id 已被注册，显式抛 Lua 错误使整包加载失败（不静默吞掉重复项）
         DefaultSubtable<RuleEntry<?>, NamespacedKey> subtable =
@@ -200,7 +203,7 @@ public final class RegisterApi {
         if (!addResult.isSuccess()) {
             throw new LuaRuntimeException("规则 id 已被注册：" + ruleId);
         }
-        Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+        Voidairrace.getInstance().getLogger().info(ServerLanguage.translate(
                 TranslateKeys.Log.REGISTER_API_RULE_REGISTERED, pkg.id(), ruleId));
     }
 
@@ -232,7 +235,7 @@ public final class RegisterApi {
         if (!addResult.isSuccess()) {
             throw new LuaRuntimeException("标签 id 已被注册：" + tagId);
         }
-        Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+        Voidairrace.getInstance().getLogger().info(ServerLanguage.translate(
                 TranslateKeys.Log.REGISTER_API_TAG_REGISTERED, pkg.id(), tagId));
     }
 
@@ -363,21 +366,6 @@ public final class RegisterApi {
             index++;
         }
         return list;
-    }
-
-    /**
-     * 读取描述符中可选的函数字段：缺省返回{@code null}；存在但不是函数即抛 Lua 错误
-     *
-     * @param kind 元素类别名（「规则」/「标签」），仅用于错误消息
-     * */
-    private static @Nullable LuaFunction optFunction(
-            @NonNull Table descriptor, @NonNull String field, @NonNull String kind) {
-        Object value = descriptor.rawget(ByteString.of(field));
-        if (value == null) return null;
-        if (!(value instanceof LuaFunction fn)) {
-            throw new LuaRuntimeException(kind + "描述符的字段 “" + field + "” 必须是函数");
-        }
-        return fn;
     }
 
     // ------ 全局表 register 的 Java 函数 ------

@@ -4,12 +4,12 @@ import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.componentbase.MatchComp;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.ClassScanner;
 import io.github.hhn756.voidairrace.result.OperationResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
@@ -51,12 +51,12 @@ public class ComponentRegistrar implements Module {
                 CompEntry entry = new CompEntry(componentClass);
                 OperationResult addResult = compSubtable.add(entry);
                 if (!addResult.isSuccess()) {
-                    logger.warning(ServerLanguageService.translate(
+                    logger.warning(ServerLanguage.translate(
                             TranslateKeys.Log.COMPONENT_REGISTRAR_REGISTER_FAILED_WITH_REASON,
                             componentClass.getName(), addResult.techMessage()));
                 }
             } catch (NoSuchMethodException e) {
-                logger.warning(ServerLanguageService.translate(
+                logger.warning(ServerLanguage.translate(
                         TranslateKeys.Log.COMPONENT_REGISTRAR_REGISTER_FAILED_NO_DEFAULT_CONSTRUCTOR,
                         componentClass.getName()));
             }

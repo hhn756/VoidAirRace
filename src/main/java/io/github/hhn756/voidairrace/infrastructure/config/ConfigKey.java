@@ -61,6 +61,20 @@ public class ConfigKey<T> {
     }
 
     /**
+     * 构造一个动态键：值类型固定为{@link Object}，供运行期生成的键定义使用<br>
+     * 与匿名子类形式不同，本工厂不记录泛型参数，因此只应传给不依赖静态类型的调用方
+     *
+     * @param path         键路径
+     * @param defaultValue 默认值，{@code null} 表示不写入默认配置文件
+     *
+     * @return 动态键
+     * */
+    public static @NonNull ConfigKey<@NonNull Object> dynamic(
+            @NonNull String path, @Nullable Object defaultValue) {
+        return new ConfigKey<>(path, defaultValue, null) {};
+    }
+
+    /**
      * 获取键对象对应的物理键路径
      *
      * @return 键路径

@@ -6,7 +6,6 @@ import io.github.hhn756.voidairrace.core.match.DataKey;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.componentbase.*;
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
-import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;
 import io.github.hhn756.voidairrace.event.PlayerJoinMatchEvent;
 import io.github.hhn756.voidairrace.event.PlayerLeaveMatchEvent;
 import io.github.hhn756.voidairrace.result.ValueResult;
@@ -135,8 +134,8 @@ public class ContestantComp extends MatchComp
             return;
         }
         joinMatchInternal(player);
+        // 参赛者变化由专属事件通知
         new PlayerJoinMatchEvent(player, match).callEvent();
-        new MatchStatusChangedEvent(match).callEvent();
     }
 
     private void joinMatchInternal(Player player) {
@@ -164,8 +163,8 @@ public class ContestantComp extends MatchComp
                 survivingTeams.put(team, count - 1);
             }
         }
+        // 参赛者变化由专属事件通知
         new PlayerLeaveMatchEvent(player, match).callEvent();
-        new MatchStatusChangedEvent(match).callEvent();
     }
 
     /**

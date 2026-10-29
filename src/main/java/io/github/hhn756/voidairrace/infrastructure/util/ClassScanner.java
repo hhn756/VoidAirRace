@@ -2,7 +2,7 @@ package io.github.hhn756.voidairrace.infrastructure.util;
 
 import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import org.jspecify.annotations.Nullable;
 
 import java.io.BufferedReader;
@@ -86,7 +86,7 @@ public class ClassScanner {
             return runtimeScan(PLUGIN_LOADER, location, type, basePackage);
         } catch (Exception e) {
             Voidairrace.getInstance().getLogger().log(Level.SEVERE,
-                    ServerLanguageService.translate(TranslateKeys.Log.CLASS_SCANNER_SCAN_FAILED), e);
+                    ServerLanguage.translate(TranslateKeys.Log.CLASS_SCANNER_SCAN_FAILED), e);
             return Collections.emptyList();
         }
     }
@@ -178,7 +178,7 @@ public class ClassScanner {
                 }
             } catch (Throwable t) {
                 // 单个类加载失败不阻断其余（链接错误一并容错）
-                Voidairrace.getInstance().getLogger().warning(ServerLanguageService.translate(
+                Voidairrace.getInstance().getLogger().warning(ServerLanguage.translate(
                         TranslateKeys.Log.CLASS_SCANNER_INDEX_CLASS_UNLOADABLE, className, t));
             }
         }
@@ -233,7 +233,7 @@ public class ClassScanner {
         } catch (Exception e) {
             Logger logger = Voidairrace.getInstance().getLogger();
             logger.log(Level.SEVERE,
-                    ServerLanguageService.translate(TranslateKeys.Log.CLASS_SCANNER_RUNTIME_SCAN_FAILED), e);
+                    ServerLanguage.translate(TranslateKeys.Log.CLASS_SCANNER_RUNTIME_SCAN_FAILED), e);
             // 忽略异常，返回空列表
             return Collections.emptyList();
         }

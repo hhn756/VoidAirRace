@@ -6,7 +6,8 @@ import io.github.hhn756.voidairrace.core.match.ComponentPriority;
 import io.github.hhn756.voidairrace.core.match.DataKey;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.componentbase.*;
-import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;
+import io.github.hhn756.voidairrace.event.MatchRemainingChangedEvent;
+import io.github.hhn756.voidairrace.event.MatchTimeExpiredEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
@@ -99,9 +100,13 @@ public class GameTimeComp extends MatchComp
         tickTask = Bukkit.getScheduler().runTaskTimer(
                 Voidairrace.getInstance(),
                 () -> {
-                    if (timeFlow && remaining > 0) {
-                        setRemaining(remaining - 1);
-                    }
+                    if (!timeFlow || remaining <= 0) return;
+                    int old = remaining;
+                    remaining = remaining - 1;
+                    // 倒计时的每 tick 变化走自己的小事件（Boss 条这类订阅者只关心时间），
+                    // 归零时刻再单独派发一次，订阅者按需选择，不必再从“比赛状态变化”里嗅探
+                    new MatchRemainingChangedEvent(match, old, remaining).callEvent();
+                    if (remaining == 0) new MatchTimeExpiredEvent(match).callEvent();
                 },
                 0L,
                 1L
@@ -132,9 +137,9 @@ public class GameTimeComp extends MatchComp
     public void setRemaining(@Range(from = 0, to = Integer.MAX_VALUE) int n) {
         int old = this.remaining;
         this.remaining = n;
-        if (old != n && match != null) {
-            new MatchStatusChangedEvent(match).callEvent();
-        }
+        if (old == n || match == null) return;
+        new MatchRemainingChangedEvent(match, old, n).callEvent();
+        if (n == 0) new MatchTimeExpiredEvent(match).callEvent();
     }
 
     /**

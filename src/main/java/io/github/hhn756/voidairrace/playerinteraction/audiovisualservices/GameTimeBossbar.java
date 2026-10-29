@@ -5,8 +5,8 @@ import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.MatchCoordinator;
 import io.github.hhn756.voidairrace.core.match.component.gametime.GameTimeComp;
 import io.github.hhn756.voidairrace.event.MatchOverEvent;
+import io.github.hhn756.voidairrace.event.MatchRemainingChangedEvent;
 import io.github.hhn756.voidairrace.event.MatchStartedEvent;
-import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;
 import io.github.hhn756.voidairrace.infrastructure.util.Percentage;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -63,8 +63,8 @@ public class GameTimeBossbar implements Listener {
     }
 
     @EventHandler
-    public void onMatchStatusChanged(MatchStatusChangedEvent event) {
-        // bossbar值随比赛剩余时间更新
+    public void onMatchRemainingChanged(MatchRemainingChangedEvent event) {
+        // bossbar 值随比赛剩余时间更新（事件本身即倒计时粒度，每 tick 一次）
         updateBossbar(event.getMatch());
     }
 

@@ -1,4 +1,4 @@
-package io.github.hhn756.voidairrace.service.language;
+package io.github.hhn756.voidairrace.infrastructure.language;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -28,13 +28,20 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 服务端语言服务：读取插件内置资源包中的语言文件，按全局设置 {@code language} 字段提供的语言，
- * 把翻译键转换为服务端当前语言的文本，供控制台日志等无法依赖客户端翻译的场合使用
+ * 服务端语言：读取插件内置资源包中的语言文件，按全局设置 {@code language} 字段提供的语言，
+ * 把翻译键转换为服务端当前语言的文本
  * <p>
- * 翻译方法为静态方法：日志点分布在模块加载流程自身的代码里，模块系统加载到本服务之前就需要翻译。
- * 服务尚未初始化（或已随插件禁用卸载）时使用回退语言的语言表，因此任何时机的日志都能得到可读文本
+ * 定位是基础设施，不是业务服务：控制台日志、命令反馈、结果类型的技术性消息等无法依赖客户端翻译的场合用它；
+ * 玩家可见文案由翻译键经客户端渲染，不经过本类
+ * <p>
+ * 翻译入口是静态方法：日志点分布在模块加载流程与配置管理器自身的代码里，语言表就绪之前就需要翻译，
+ * 因此{@link #translate(String, Object...)}不依赖模块加载顺序。服务尚未初始化（或已随插件禁用卸载）时
+ * 使用回退语言的语言表，任何时机的日志都能得到可读文本
+ * <p>
+ * 本类与{@link Config}相互引用——本类读取全局设置，配置管理器用本类输出日志。两者同属基础设施层，
+ * 这个环只是基础设施内部的相互依赖，不代表基础设施可以反向依赖 service 层
  * */
-public class ServerLanguageService implements Module {
+public class ServerLanguage implements Module {
     /**
      * 内置资源包中语言文件所在目录
      * */
@@ -49,7 +56,7 @@ public class ServerLanguageService implements Module {
     /**
      * 本次插件启用中的服务实例；为{@code null} 表示服务未初始化或已卸载
      * */
-    private static volatile @Nullable ServerLanguageService instance;
+    private static volatile @Nullable ServerLanguage instance;
 
     /**
      * 回退语言的语言表，首次需要时从内置资源加载<br>
@@ -112,7 +119,7 @@ public class ServerLanguageService implements Module {
      * @return 翻译后的文本
      * */
     public static @NonNull String translate(@NonNull String key, @Nullable Object... args) {
-        ServerLanguageService current = instance;
+        ServerLanguage current = instance;
         String pattern = current == null ? null : current.texts.get(key);
         if (pattern == null) pattern = fallbackTexts().get(key);
         if (pattern == null) return key;
@@ -139,7 +146,7 @@ public class ServerLanguageService implements Module {
      * */
     private static @NonNull Map<@NonNull String, @NonNull String> loadTexts(@NonNull Language language) {
         String path = LANGUAGE_RESOURCE_DIR + language.code() + ".json";
-        try (InputStream stream = ServerLanguageService.class.getResourceAsStream(path)) {
+        try (InputStream stream = ServerLanguage.class.getResourceAsStream(path)) {
             if (stream == null) {
                 logBundleFailure(path, null);
                 return Map.of();
@@ -168,7 +175,7 @@ public class ServerLanguageService implements Module {
         Map<String, String> cached = fallbackTexts;
         if (cached != null) return cached;
 
-        synchronized (ServerLanguageService.class) {
+        synchronized (ServerLanguage.class) {
             if (fallbackTexts == null) fallbackTexts = loadTexts(FALLBACK_LANGUAGE);
             return fallbackTexts;
         }
@@ -180,8 +187,9 @@ public class ServerLanguageService implements Module {
     private static void logBundleFailure(@NonNull String path, @Nullable Throwable cause) {
         Logger logger = pluginLogger();
         String message = "Failed to load bundled language file " + path;
-        if (cause == null) logger.severe(message);
-        else logger.log(Level.SEVERE, message, cause);
+        if (cause == null) {
+            logger.severe(message);
+        } else logger.log(Level.SEVERE, message, cause);
     }
 
     /**

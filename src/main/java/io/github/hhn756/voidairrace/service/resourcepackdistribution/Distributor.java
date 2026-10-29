@@ -6,9 +6,9 @@ import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.ListenerProvider;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.resource.ResourcePackInfo;
 import net.kyori.adventure.resource.ResourcePackRequest;
@@ -79,7 +79,7 @@ public class Distributor implements Module, ListenerProvider, Listener {
     private void onLoad() {
         YamlConfig settings = Config.getInstance().getYmlConfig(PublicFile.GLOBAL_SETTING);
         if (!settings.get(GlobalSettingKey.ENABLE_RESOURCE_PACK_DISTRIBUTION_HTTP, false)) {
-            logger().fine(ServerLanguageService.translate(TranslateKeys.Log.RESOURCE_PACK_DISABLED_BY_CONFIG));
+            logger().fine(ServerLanguage.translate(TranslateKeys.Log.RESOURCE_PACK_DISABLED_BY_CONFIG));
             return;
         }
 
@@ -87,21 +87,21 @@ public class Distributor implements Module, ListenerProvider, Listener {
         try {
             externalAddress = parseExternalAddress(settings.get(GlobalSettingKey.RESOURCE_PACK_DISTRIBUTION_HTTP_EXTERNAL_ADDRESS));
         } catch (IllegalArgumentException e) {
-            logger().warning(ServerLanguageService.translate(
+            logger().warning(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_DISABLED_INVALID_ADDRESS, e.getMessage()));
             return;
         }
 
         int listenPort = settings.get(GlobalSettingKey.RESOURCE_PACK_DISTRIBUTION_HTTP_LISTEN_PORT);
         if (listenPort < 1 || listenPort > 65535) {
-            logger().warning(ServerLanguageService.translate(
+            logger().warning(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_DISABLED_INVALID_PORT, listenPort));
             return;
         }
 
         int maxConcurrentRequests = settings.get(GlobalSettingKey.RESOURCE_PACK_DISTRIBUTION_HTTP_MAX_CONCURRENT_REQUESTS);
         if (maxConcurrentRequests < 1) {
-            logger().warning(ServerLanguageService.translate(
+            logger().warning(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_DISABLED_INVALID_CONCURRENCY, maxConcurrentRequests));
             return;
         }
@@ -111,7 +111,7 @@ public class Distributor implements Module, ListenerProvider, Listener {
             packed = PackArchive.pack();
         } catch (IOException e) {
             logger().log(Level.WARNING,
-                    ServerLanguageService.translate(TranslateKeys.Log.RESOURCE_PACK_PACK_FAILED), e);
+                    ServerLanguage.translate(TranslateKeys.Log.RESOURCE_PACK_PACK_FAILED), e);
             return;
         }
 
@@ -120,7 +120,7 @@ public class Distributor implements Module, ListenerProvider, Listener {
             server = PackServer.start(
                     listenPort, pathOf(externalAddress), packed.content(), maxConcurrentRequests);
         } catch (IOException | SecurityException e) {
-            logger().log(Level.WARNING, ServerLanguageService.translate(
+            logger().log(Level.WARNING, ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_SERVER_START_FAILED, listenPort), e);
             return;
         }
@@ -129,7 +129,7 @@ public class Distributor implements Module, ListenerProvider, Listener {
                 server,
                 ResourcePackInfo.resourcePackInfo(packed.id(), externalAddress, packed.hash())
         );
-        logger().info(ServerLanguageService.translate(
+        logger().info(ServerLanguage.translate(
                 TranslateKeys.Log.RESOURCE_PACK_ENABLED,
                 externalAddress, listenPort, maxConcurrentRequests, packed.hash()));
     }
@@ -167,23 +167,23 @@ public class Distributor implements Module, ListenerProvider, Listener {
 
         String who = audience instanceof Player player
                 ? player.getName()
-                : ServerLanguageService.translate(TranslateKeys.Log.RESOURCE_PACK_AUDIENCE_NON_PLAYER);
+                : ServerLanguage.translate(TranslateKeys.Log.RESOURCE_PACK_AUDIENCE_NON_PLAYER);
         switch (status) {
-            case SUCCESSFULLY_LOADED -> logger().fine(ServerLanguageService.translate(
+            case SUCCESSFULLY_LOADED -> logger().fine(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_CLIENT_LOADED, who));
             case DECLINED -> {
-                logger().warning(ServerLanguageService.translate(
+                logger().warning(ServerLanguage.translate(
                         TranslateKeys.Log.RESOURCE_PACK_CLIENT_DECLINED, who));
                 audience.sendMessage(Component.translatable(TranslateKeys.ResourcePack.DECLINED, DECLINED_FALLBACK));
             }
             case FAILED_DOWNLOAD -> {
-                logger().warning(ServerLanguageService.translate(
+                logger().warning(ServerLanguage.translate(
                         TranslateKeys.Log.RESOURCE_PACK_CLIENT_DOWNLOAD_FAILED, who));
                 audience.sendMessage(Component.translatable(
                         TranslateKeys.ResourcePack.FAILED_DOWNLOAD, FAILED_DOWNLOAD_FALLBACK));
             }
             default -> {
-                logger().warning(ServerLanguageService.translate(
+                logger().warning(ServerLanguage.translate(
                         TranslateKeys.Log.RESOURCE_PACK_CLIENT_APPLY_FAILED, who, status));
                 audience.sendMessage(Component.translatable(
                         TranslateKeys.ResourcePack.FAILED_APPLY, FAILED_APPLY_FALLBACK));
@@ -198,25 +198,25 @@ public class Distributor implements Module, ListenerProvider, Listener {
      * */
     private static @NonNull URI parseExternalAddress(@Nullable String configured) {
         if (configured == null || configured.isBlank())
-            throw new IllegalArgumentException(ServerLanguageService.translate(
+            throw new IllegalArgumentException(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_ADDRESS_MISSING));
 
         URI address;
         try {
             address = new URI(configured.trim());
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(ServerLanguageService.translate(
+            throw new IllegalArgumentException(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_ADDRESS_INVALID_URL, configured));
         }
 
         if (!"http".equals(address.getScheme()))
-            throw new IllegalArgumentException(ServerLanguageService.translate(
+            throw new IllegalArgumentException(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_ADDRESS_NOT_HTTP, address.getScheme(), configured));
         if (address.getHost() == null)
-            throw new IllegalArgumentException(ServerLanguageService.translate(
+            throw new IllegalArgumentException(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_ADDRESS_NO_HOST, configured));
         if (address.getQuery() != null || address.getFragment() != null)
-            throw new IllegalArgumentException(ServerLanguageService.translate(
+            throw new IllegalArgumentException(ServerLanguage.translate(
                     TranslateKeys.Log.RESOURCE_PACK_ADDRESS_QUERY_OR_FRAGMENT, configured));
         return address;
     }

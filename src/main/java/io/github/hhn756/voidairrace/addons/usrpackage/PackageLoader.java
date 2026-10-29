@@ -2,9 +2,9 @@ package io.github.hhn756.voidairrace.addons.usrpackage;
 
 import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.result.ValueResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -37,8 +37,8 @@ public class PackageLoader implements Module {
 
     /**
      * 已挂载的 zip 包：zip 文件路径与对应的挂载文件系统<br>
-     * 包加载成功后其根目录在本次启用中仍会被读取（如后续读取入口脚本），因此挂载保持到插件禁用，
-     * 由 {@link #onUnload()} 统一关闭；加载失败的挂载则立即关闭
+     * 挂载保持到插件禁用：已加载的包在运行期仍要读取包内文件，被卸载的包也可能重新启用；
+     * 由 {@link #onUnload()} 统一关闭
      * */
     private record MountedZip(@NonNull Path zipPath, @NonNull FileSystem fileSystem) {}
 
@@ -51,52 +51,7 @@ public class PackageLoader implements Module {
      * */
     private void onLoad(@NonNull PackageManager packageManager) {
         Logger logger = Voidairrace.getInstance().getLogger();
-
-        Path packagesDir = Voidairrace.getInstance().getDataFolder().toPath().resolve(PACKAGES_DIR_NAME);
-        if (!Files.isDirectory(packagesDir)) {
-            try {
-                Files.createDirectories(packagesDir);
-            } catch (IOException e) {
-                logger.log(Level.SEVERE, ServerLanguageService.translate(
-                        TranslateKeys.Log.PACKAGE_LOADER_DIR_CREATE_FAILED, packagesDir), e);
-                return;
-            }
-        }
-
-        List<Path> entries;
-        try (var paths = Files.list(packagesDir)) {
-            entries = paths.sorted().toList();
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, ServerLanguageService.translate(
-                    TranslateKeys.Log.PACKAGE_LOADER_DIR_READ_FAILED, packagesDir), e);
-            return;
-        }
-
-        // 先收集全部包根（zip 挂载暂不关闭），批量交给包管理器统一排序加载
-        List<PackageRoot> roots = new ArrayList<>();
-        List<MountedZip> mounted = new ArrayList<>();
-        for (Path entry : entries) {
-            // 目录包：直接以该目录为包根
-            if (Files.isDirectory(entry)) {
-                roots.add(PackageRoot.ofDirectory(entry));
-                continue;
-            }
-            // zip 包：挂载为只读文件系统，解析出包根，与目录包共用加载代码；其余文件忽略
-            if (!isZipFile(entry)) continue;
-            FileSystem fs = mountZip(entry, logger);
-            if (fs == null) continue;
-            Path rootInZip = resolveZipPackageRoot(fs.getPath("/"), logger);
-            if (rootInZip == null) {
-                logger.warning(ServerLanguageService.translate(
-                        TranslateKeys.Log.PACKAGE_LOADER_ZIP_META_MISSING, entry, PackageManager.META_FILE_NAME));
-                closeZip(fs, entry, logger);
-                continue;
-            }
-            roots.add(PackageRoot.ofZip(rootInZip, entry));
-            mounted.add(new MountedZip(entry, fs));
-        }
-
-        List<PackageManager.PackageLoadResult> results = packageManager.load(roots);
+        List<PackageManager.PackageLoadResult> results = packageManager.load(scan());
 
         // 紧凑汇报：同类结果合并为一行，避免逐包刷屏；意外异常（含堆栈）仍逐条记录
         // 未启用与其他失败的条目以来源简称标识（失败结果不携带包 Id），已加载条目以包 Id 标识
@@ -105,7 +60,7 @@ public class PackageLoader implements Module {
         Map<String, List<String>> failureGroups = new LinkedHashMap<>(); // 失败键 → 各项技术性消息
         for (PackageManager.PackageLoadResult loadResult : results) {
             if (loadResult.exception() != null) {
-                logger.log(Level.SEVERE, ServerLanguageService.translate(
+                logger.log(Level.SEVERE, ServerLanguage.translate(
                         TranslateKeys.Log.PACKAGE_LOADER_UNEXPECTED_ERROR,
                         loadResult.root().describe(), loadResult.exception().getMessage()), loadResult.exception());
                 continue;
@@ -116,40 +71,86 @@ public class PackageLoader implements Module {
                 loadedIds.add(result.value().id());
             } else if (result instanceof ValueResult.Failed<UsrPackage> failed) {
                 if (TranslateKeys.Addons.USR_PACKAGE_PACKAGE_NOT_ENABLED.equals(failed.reasonKey())) {
-                    notEnabledNames.add(shortSourceName(loadResult.root()));
+                    notEnabledNames.add(sourceName(loadResult.root()));
                 } else {
                     String techMessage = failed.techMessage();
                     failureGroups.computeIfAbsent(failed.reasonKey(), key -> new ArrayList<>())
-                            .add(techMessage == null ? shortSourceName(loadResult.root()) : techMessage);
+                            .add(techMessage == null ? sourceName(loadResult.root()) : techMessage);
                 }
             }
         }
         if (loadedIds.isEmpty()) {
-            logger.info(ServerLanguageService.translate(
+            logger.info(ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_LOADER_NONE_LOADED, results.size()));
         } else {
-            logger.info(ServerLanguageService.translate(
+            logger.info(ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_LOADER_LOADED_SUMMARY,
                     loadedIds.size(), results.size(), String.join("、", loadedIds)));
         }
         if (!notEnabledNames.isEmpty()) {
-            logger.warning(ServerLanguageService.translate(
+            logger.warning(ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_LOADER_NOT_ENABLED_SKIPPED, String.join("、", notEnabledNames)));
         }
         for (Map.Entry<String, List<String>> group : failureGroups.entrySet()) {
-            logger.warning(ServerLanguageService.translate(
+            logger.warning(ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_LOADER_FAILED_GROUP,
                     failureLabel(group.getKey()), String.join("；", group.getValue())));
         }
+    }
 
-        // 加载成功的 zip 包保持挂载（包内容在本次启用中仍会被读取），其余挂载立即关闭避免泄漏
-        for (MountedZip zip : mounted) {
-            boolean loaded = results.stream().anyMatch(loadResult -> loadResult.isSuccess()
-                    && loadResult.root().isZip()
-                    && loadResult.root().zipPath().equals(zip.zipPath()));
-            if (loaded) mountedZips.add(zip);
-            else closeZip(zip.fileSystem(), zip.zipPath(), logger);
+    /**
+     * 扫描用户包目录，返回其中全部包根<br>
+     * 目录包直接以目录为包根；zip 包挂载为只读文件系统后解析出包根，与目录包共用后续加载代码。
+     * 能解析出包根的 zip 挂载保持到插件禁用，解析失败（不是合法用户包）的挂载立即关闭
+     * <p>
+     * 供插件启用时的自动加载与“用户包”命令共用；命令每次调用都会重新扫描，运行期放入的包因此可见
+     *
+     * @return 扫描到的包根，按目录项路径排序；包目录创建或读取失败时为空列表
+     * */
+    public @NonNull List<@NonNull PackageRoot> scan() {
+        Logger logger = Voidairrace.getInstance().getLogger();
+
+        Path packagesDir = Voidairrace.getInstance().getDataFolder().toPath().resolve(PACKAGES_DIR_NAME);
+        if (!Files.isDirectory(packagesDir)) {
+            try {
+                Files.createDirectories(packagesDir);
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, ServerLanguage.translate(
+                        TranslateKeys.Log.PACKAGE_LOADER_DIR_CREATE_FAILED, packagesDir), e);
+                return List.of();
+            }
         }
+
+        List<Path> entries;
+        try (var paths = Files.list(packagesDir)) {
+            entries = paths.sorted().toList();
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, ServerLanguage.translate(
+                    TranslateKeys.Log.PACKAGE_LOADER_DIR_READ_FAILED, packagesDir), e);
+            return List.of();
+        }
+
+        List<PackageRoot> roots = new ArrayList<>();
+        for (Path entry : entries) {
+            // 目录包：直接以该目录为包根
+            if (Files.isDirectory(entry)) {
+                roots.add(PackageRoot.ofDirectory(entry));
+                continue;
+            }
+            // zip 包：挂载为只读文件系统，解析出包根，与目录包共用加载代码；其余文件忽略
+            if (!isZipFile(entry)) continue;
+            FileSystem fs = mountOrReuse(entry, logger);
+            if (fs == null) continue;
+            Path rootInZip = resolveZipPackageRoot(fs.getPath("/"), logger);
+            if (rootInZip == null) {
+                logger.warning(ServerLanguage.translate(
+                        TranslateKeys.Log.PACKAGE_LOADER_ZIP_META_MISSING, entry, PackageManager.META_FILE_NAME));
+                closeZip(fs, entry, logger);
+                continue;
+            }
+            roots.add(PackageRoot.ofZip(rootInZip, entry));
+        }
+        return roots;
     }
 
     /**
@@ -197,22 +198,41 @@ public class PackageLoader implements Module {
      * */
     private static @NonNull String failureLabel(@Nullable String reasonKey) {
         if (reasonKey == null) {
-            return ServerLanguageService.translate(TranslateKeys.Log.PACKAGE_LOADER_LABEL_UNKNOWN);
+            return ServerLanguage.translate(TranslateKeys.Log.PACKAGE_LOADER_LABEL_UNKNOWN);
         }
         String labelKey = FAILURE_LABEL_KEYS.get(reasonKey);
-        return ServerLanguageService.translate(labelKey == null ? reasonKey : labelKey);
+        return ServerLanguage.translate(labelKey == null ? reasonKey : labelKey);
     }
 
     /**
-     * 取包来源的简称用于紧凑汇报：目录包为目录名，zip 包为 zip 文件名（不含上级路径）
+     * 取包来源的简称：目录包为目录名，zip 包为 zip 文件名（不含上级路径）
      *
      * @param root 包根
      *
      * @return 来源简称
      * */
-    private static @NonNull String shortSourceName(@NonNull PackageRoot root) {
+    public static @NonNull String sourceName(@NonNull PackageRoot root) {
         Path fileName = root.isZip() ? root.zipPath().getFileName() : root.path().getFileName();
         return String.valueOf(fileName);
+    }
+
+    /**
+     * 取得 zip 包对应的挂载文件系统：同一 zip 已有打开的挂载时复用，否则重新挂载<br>
+     * 关闭的旧记录先清掉，避免重复扫描（本插件启用期间只可能因插件禁用而关闭）导致多次挂载同一 zip
+     *
+     * @param zipPath zip 文件路径
+     * @param logger  日志器
+     *
+     * @return 文件系统；挂载失败返回{@code null}并记录日志
+     * */
+    private @Nullable FileSystem mountOrReuse(@NonNull Path zipPath, @NonNull Logger logger) {
+        mountedZips.removeIf(mounted -> mounted.zipPath().equals(zipPath) && !mounted.fileSystem().isOpen());
+        for (MountedZip mounted : mountedZips) {
+            if (mounted.zipPath().equals(zipPath)) return mounted.fileSystem();
+        }
+        FileSystem fs = mountZip(zipPath, logger);
+        if (fs != null) mountedZips.add(new MountedZip(zipPath, fs));
+        return fs;
     }
 
     /**
@@ -228,7 +248,7 @@ public class PackageLoader implements Module {
             // 只读挂载：包内容不允许被修改
             return FileSystems.newFileSystem(zipPath, Map.of("readOnly", "true"));
         } catch (IOException | ProviderNotFoundException e) {
-            logger.log(Level.SEVERE, ServerLanguageService.translate(
+            logger.log(Level.SEVERE, ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_LOADER_ZIP_MOUNT_FAILED, zipPath), e);
             return null;
         }
@@ -251,7 +271,7 @@ public class PackageLoader implements Module {
         try (var paths = Files.list(zipRoot)) {
             topLevel = paths.toList();
         } catch (IOException e) {
-            logger.log(Level.SEVERE, ServerLanguageService.translate(
+            logger.log(Level.SEVERE, ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_LOADER_ZIP_TOP_LEVEL_READ_FAILED, zipRoot), e);
             return null;
         }
@@ -278,7 +298,7 @@ public class PackageLoader implements Module {
         try {
             fs.close();
         } catch (IOException e) {
-            logger.log(Level.SEVERE, ServerLanguageService.translate(
+            logger.log(Level.SEVERE, ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_LOADER_ZIP_CLOSE_FAILED, zipPath), e);
         }
     }

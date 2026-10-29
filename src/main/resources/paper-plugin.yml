@@ -3,3 +3,8 @@ version: '0.1'
 main: io.github.hhn756.voidairrace.Voidairrace
 bootstrapper: io.github.hhn756.voidairrace.Bootstrap
 api-version: '1.21.11'
+
+permissions:
+  void_air_race.command.team:
+    description: 玩家在大厅选择队伍
+    default: true

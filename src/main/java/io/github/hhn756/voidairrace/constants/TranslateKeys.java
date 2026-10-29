@@ -78,6 +78,36 @@ public class TranslateKeys {
         public static final String PLAYER_MANAGER_INIT_GET_YES = "void_air_race.command.player_manager.init.get.yes";
         public static final String PLAYER_MANAGER_INIT_REINIT_NULL_PLAYER = "void_air_race.command.player_manager.init.reinit.null_player";
         public static final String PLAYER_MANAGER_INIT_REINIT_OK = "void_air_race.command.player_manager.init.reinit.ok";
+        public static final String TEAM_CURRENT_NONE = "void_air_race.command.team.current.none";
+        public static final String TEAM_CURRENT_TEAM = "void_air_race.command.team.current.team";
+        public static final String TEAM_JOIN_SUCCESS = "void_air_race.command.team.join.success";
+        public static final String TEAM_LEAVE_SUCCESS = "void_air_race.command.team.leave.success";
+        public static final String TEAM_NOT_FREE = "void_air_race.command.team.not_free";
+        public static final String TEAM_NOT_IN_LOBBY = "void_air_race.command.team.not_in_lobby";
+        public static final String TEAM_NO_AVAILABLE_TEAMS = "void_air_race.command.team.no_available_teams";
+        public static final String TEAM_PLAYER_ONLY = "void_air_race.command.team.player_only";
+        public static final String TEAM_UNKNOWN = "void_air_race.command.team.unknown";
+        public static final String USR_PACKAGE_DISABLE_CONFIG_SAVE_FAILED = "void_air_race.command.usr_package.disable.config_save_failed";
+        public static final String USR_PACKAGE_DISABLE_FAILED = "void_air_race.command.usr_package.disable.failed";
+        public static final String USR_PACKAGE_DISABLE_NOT_ENABLED = "void_air_race.command.usr_package.disable.not_enabled";
+        public static final String USR_PACKAGE_DISABLE_SUCCESS = "void_air_race.command.usr_package.disable.success";
+        public static final String USR_PACKAGE_ELEMENTS_EMPTY = "void_air_race.command.usr_package.elements.empty";
+        public static final String USR_PACKAGE_ELEMENTS_END = "void_air_race.command.usr_package.elements.end";
+        public static final String USR_PACKAGE_ELEMENTS_ENTRY = "void_air_race.command.usr_package.elements.entry";
+        public static final String USR_PACKAGE_ELEMENTS_PACKAGE_NOT_LOADED = "void_air_race.command.usr_package.elements.package_not_loaded";
+        public static final String USR_PACKAGE_ELEMENTS_START = "void_air_race.command.usr_package.elements.start";
+        public static final String USR_PACKAGE_ELEMENTS_UNKNOWN_TYPE = "void_air_race.command.usr_package.elements.unknown_type";
+        public static final String USR_PACKAGE_ENABLE_ALREADY_LOADED = "void_air_race.command.usr_package.enable.already_loaded";
+        public static final String USR_PACKAGE_ENABLE_CONFIG_SAVE_FAILED = "void_air_race.command.usr_package.enable.config_save_failed";
+        public static final String USR_PACKAGE_ENABLE_FAILED = "void_air_race.command.usr_package.enable.failed";
+        public static final String USR_PACKAGE_ENABLE_PACKAGE_NOT_FOUND = "void_air_race.command.usr_package.enable.package_not_found";
+        public static final String USR_PACKAGE_ENABLE_SUCCESS = "void_air_race.command.usr_package.enable.success";
+        public static final String USR_PACKAGE_LIST_EMPTY = "void_air_race.command.usr_package.list.empty";
+        public static final String USR_PACKAGE_LIST_END = "void_air_race.command.usr_package.list.end";
+        public static final String USR_PACKAGE_LIST_ENTRY_LOADED = "void_air_race.command.usr_package.list.entry_loaded";
+        public static final String USR_PACKAGE_LIST_ENTRY_UNIDENTIFIED = "void_air_race.command.usr_package.list.entry_unidentified";
+        public static final String USR_PACKAGE_LIST_ENTRY_UNLOADED = "void_air_race.command.usr_package.list.entry_unloaded";
+        public static final String USR_PACKAGE_LIST_START = "void_air_race.command.usr_package.list.start";
     }
 
     public static class Config {
@@ -101,6 +131,9 @@ public class TranslateKeys {
         public static final String CLASS_SCANNER_SCAN_FAILED = "void_air_race.log.class_scanner.scan_failed";
         public static final String COMMAND_MATCH_START_FAILED = "void_air_race.log.command.match_start_failed";
         public static final String COMMAND_MATCH_STOP_FAILED = "void_air_race.log.command.match_stop_failed";
+        public static final String COMMAND_USR_PACKAGE_CONFIG_SAVE_FAILED = "void_air_race.log.command.usr_package_config_save_failed";
+        public static final String COMMAND_USR_PACKAGE_LOAD_FAILED = "void_air_race.log.command.usr_package_load_failed";
+        public static final String COMMAND_USR_PACKAGE_UNLOAD_FAILED = "void_air_race.log.command.usr_package_unload_failed";
         public static final String COMPONENT_REGISTRAR_REGISTER_FAILED_NO_DEFAULT_CONSTRUCTOR = "void_air_race.log.component_registrar.register_failed_no_default_constructor";
         public static final String COMPONENT_REGISTRAR_REGISTER_FAILED_WITH_REASON = "void_air_race.log.component_registrar.register_failed_with_reason";
         public static final String CONFIG_DIR_CREATE_FAILED = "void_air_race.log.config.dir_create_failed";
@@ -114,6 +147,7 @@ public class TranslateKeys {
         public static final String GRASS_LAND_ENABLE_RULE_FAILED = "void_air_race.log.grass_land.enable_rule_failed";
         public static final String LANGUAGE_INVALID_SETTING = "void_air_race.log.language.invalid_setting";
         public static final String LUA_MAP_ON_OVER_FAILED = "void_air_race.log.lua_map.on_over_failed";
+        public static final String LUA_MAP_ON_TICK_FAILED = "void_air_race.log.lua_map.on_tick_failed";
         public static final String LUA_RULE_CALLBACK_FAILED = "void_air_race.log.lua_rule.callback_failed";
         public static final String MAP_INITIALIZER_ALL_FINISHED = "void_air_race.log.map_initializer.all_finished";
         public static final String MAP_INITIALIZER_MAP_FAILED = "void_air_race.log.map_initializer.map_failed";
@@ -135,6 +169,9 @@ public class TranslateKeys {
         public static final String MODULES_ROLLBACK_UNLOAD_FAILED = "void_air_race.log.modules.rollback_unload_failed";
         public static final String MODULES_UNLOADING = "void_air_race.log.modules.unloading";
         public static final String MODULES_UNLOAD_FAILED_SKIPPED = "void_air_race.log.modules.unload_failed_skipped";
+        public static final String PACKAGE_CONFIG_DELETE_FAILED = "void_air_race.log.package_config.delete_failed";
+        public static final String PACKAGE_CONFIG_LOAD_FAILED = "void_air_race.log.package_config.load_failed";
+        public static final String PACKAGE_CONFIG_SAVE_FAILED = "void_air_race.log.package_config.save_failed";
         public static final String PACKAGE_LOADER_DIR_CREATE_FAILED = "void_air_race.log.package_loader.dir_create_failed";
         public static final String PACKAGE_LOADER_DIR_READ_FAILED = "void_air_race.log.package_loader.dir_read_failed";
         public static final String PACKAGE_LOADER_FAILED_GROUP = "void_air_race.log.package_loader.failed_group";

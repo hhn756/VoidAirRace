@@ -4,16 +4,16 @@ import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.addons.script.MutationAccess;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
-import io.github.hhn756.voidairrace.addons.script.api.handle.HandleApi;
+import io.github.hhn756.voidairrace.addons.script.api.HandleApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
 import io.github.hhn756.voidairrace.core.map.PlayableGameMap;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.exception.RegistryException;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.load.ChunkClassLoader;
 import net.sandius.rembulan.runtime.LuaFunction;
@@ -24,8 +24,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 用户地图的 Java 适配器：把脚本注册的地图描述适配为{@link PlayableGameMap}<br>
  * 每场使用该地图的比赛经注册项实例化一个全新的本类实例；脚本提供的
- * {@code on_start}/{@code on_over} 回调在比赛开始/结束时经调用门触发，
- * 参数为该场比赛的句柄表（见{@link HandleApi}）
+ * {@code on_start}/{@code on_tick}/{@code on_over} 回调在比赛开始、每游戏刻与结束时
+ * 经调用门触发，参数为该场比赛的句柄表（见{@link HandleApi}）
  * <p>
  * 地图无异步初始化：包加载成功即视为就绪（{@link #isReady()}恒真）
  * <p>
@@ -44,6 +44,8 @@ final class LuaGameMap extends PlayableGameMap {
     private final @Range(from = 1, to = Integer.MAX_VALUE) int maxTeams;
     /** 脚本提供的 on_start 函数，未提供为{@code null} */
     private final @Nullable LuaFunction onStartFn;
+    /** 脚本提供的 on_tick 函数，未提供为{@code null} */
+    private final @Nullable LuaFunction onTickFn;
     /** 脚本提供的 on_over 函数，未提供为{@code null} */
     private final @Nullable LuaFunction onOverFn;
     /** 共享 Lua 状态上下文 */
@@ -67,6 +69,7 @@ final class LuaGameMap extends PlayableGameMap {
      * @param meta             地图元数据
      * @param maxTeams         允许参赛的最大队伍数量
      * @param onStartFn        脚本提供的 on_start 函数，未提供为{@code null}
+     * @param onTickFn         脚本提供的 on_tick 函数，未提供为{@code null}
      * @param onOverFn         脚本提供的 on_over 函数，未提供为{@code null}
      * @param stateContext     共享 Lua 状态上下文
      * @param chunkClassLoader 编译产物类加载器
@@ -80,6 +83,7 @@ final class LuaGameMap extends PlayableGameMap {
             @NonNull GameElementMeta meta,
             @Range(from = 1, to = Integer.MAX_VALUE) int maxTeams,
             @Nullable LuaFunction onStartFn,
+            @Nullable LuaFunction onTickFn,
             @Nullable LuaFunction onOverFn,
             @NonNull StateContext stateContext,
             @NonNull ChunkClassLoader chunkClassLoader,
@@ -88,7 +92,7 @@ final class LuaGameMap extends PlayableGameMap {
     ) throws RegistryException {
         return new MapEntry(
                 meta,
-                () -> new LuaGameMap(meta, maxTeams, onStartFn, onOverFn, stateContext,
+                () -> new LuaGameMap(meta, maxTeams, onStartFn, onTickFn, onOverFn, stateContext,
                         chunkClassLoader, pkg, owner),
                 true,
                 maxTeams
@@ -102,6 +106,7 @@ final class LuaGameMap extends PlayableGameMap {
      * @param meta              地图元数据
      * @param maxTeams          允许参赛的最大队伍数量
      * @param onStartFn         脚本提供的 on_start 函数，未提供为{@code null}
+     * @param onTickFn          脚本提供的 on_tick 函数，未提供为{@code null}
      * @param onOverFn          脚本提供的 on_over 函数，未提供为{@code null}
      * @param stateContext      共享 Lua 状态上下文
      * @param chunkClassLoader  编译产物类加载器
@@ -112,6 +117,7 @@ final class LuaGameMap extends PlayableGameMap {
             @NonNull GameElementMeta meta,
             @Range(from = 1, to = Integer.MAX_VALUE) int maxTeams,
             @Nullable LuaFunction onStartFn,
+            @Nullable LuaFunction onTickFn,
             @Nullable LuaFunction onOverFn,
             @NonNull StateContext stateContext,
             @NonNull ChunkClassLoader chunkClassLoader,
@@ -121,6 +127,7 @@ final class LuaGameMap extends PlayableGameMap {
         this.meta = meta;
         this.maxTeams = maxTeams;
         this.onStartFn = onStartFn;
+        this.onTickFn = onTickFn;
         this.onOverFn = onOverFn;
         this.stateContext = stateContext;
         this.chunkClassLoader = chunkClassLoader;
@@ -147,6 +154,19 @@ final class LuaGameMap extends PlayableGameMap {
     }
 
     @Override
+    public void tick(@NonNull Match match) {
+        if (onTickFn == null) return;
+        // 每刻回调失败只记日志，不中断比赛（与规则 tick 的处理一致）
+        ValueResult<Object[]> result = ScriptCallGate.call(
+                stateContext, chunkClassLoader, onTickFn, HandleApi.forMatch(stateContext, match, pkg));
+        if (!result.hasValue()) {
+            Voidairrace.getInstance().getLogger().warning(
+                    ServerLanguage.translate(
+                            TranslateKeys.Log.LUA_MAP_ON_TICK_FAILED, owner, result.techMessage()));
+        }
+    }
+
+    @Override
     public @NonNull OperationResult over(@NonNull Match match) {
         if (onOverFn == null) return OperationResult.success();
         ValueResult<Object[]> result = ScriptCallGate.call(
@@ -154,7 +174,7 @@ final class LuaGameMap extends PlayableGameMap {
         if (!result.hasValue()) {
             // 收尾阶段失败只记日志，不阻断比赛结束流程（对齐规则 on_disable 的处理）
             Voidairrace.getInstance().getLogger().warning(
-                    ServerLanguageService.translate(
+                    ServerLanguage.translate(
                             TranslateKeys.Log.LUA_MAP_ON_OVER_FAILED, owner, result.techMessage())
             );
         }

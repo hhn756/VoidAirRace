@@ -3,6 +3,7 @@ package io.github.hhn756.voidairrace.infrastructure.util.lua;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.LuaRuntimeException;
 import net.sandius.rembulan.Table;
+import net.sandius.rembulan.runtime.LuaFunction;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -36,6 +37,28 @@ public final class ApiArgs {
         if (arg instanceof Long l) return l.doubleValue();
         if (arg instanceof Double d) return d;
         throw new LuaRuntimeException(what + "必须是数字");
+    }
+
+    /**
+     * 校验参数为 Lua 布尔值
+     *
+     * @param arg  参数原值
+     * @param what 参数用途说明，用于错误消息（最终消息为{@code what + "必须是布尔值"}）
+     * */
+    public static boolean expectBoolean(@Nullable Object arg, @NonNull String what) {
+        if (arg instanceof Boolean value) return value;
+        throw new LuaRuntimeException(what + "必须是布尔值");
+    }
+
+    /**
+     * 校验参数为 Lua 函数
+     *
+     * @param arg  参数原值
+     * @param what 参数用途说明，用于错误消息（最终消息为{@code what + "必须是函数"}）
+     * */
+    public static @NonNull LuaFunction expectFunction(@Nullable Object arg, @NonNull String what) {
+        if (arg instanceof LuaFunction fn) return fn;
+        throw new LuaRuntimeException(what + "必须是函数");
     }
 
     /**
@@ -77,6 +100,22 @@ public final class ApiArgs {
         Object value = table.rawget(ByteString.of(field));
         if (value == null) return null;
         return expectString(value, fieldLabel(what, field) + " ");
+    }
+
+    /**
+     * 读取表中可选函数字段
+     *
+     * @param table 字段所在表
+     * @param field 字段名
+     * @param what  字段所属参数的用途说明，用于错误消息
+     *
+     * @return 字段值；缺省返回{@code null}
+     * */
+    public static @Nullable LuaFunction optFunctionField(
+            @NonNull Table table, @NonNull String field, @NonNull String what) {
+        Object value = table.rawget(ByteString.of(field));
+        if (value == null) return null;
+        return expectFunction(value, fieldLabel(what, field) + " ");
     }
 
     /**

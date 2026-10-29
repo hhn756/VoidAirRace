@@ -6,11 +6,11 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder.BlockFinder;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -85,7 +85,7 @@ public class MapInitializer implements Module {
         }
 
         chain.thenRun(() -> logger.fine(
-                ServerLanguageService.translate(TranslateKeys.Log.MAP_INITIALIZER_ALL_FINISHED)));
+                ServerLanguage.translate(TranslateKeys.Log.MAP_INITIALIZER_ALL_FINISHED)));
     }
 
     /**
@@ -125,7 +125,7 @@ public class MapInitializer implements Module {
             return mapInst.initAsync(mainClass)
                     .thenRunAsync(() -> {
                                 setInitFlag(mapId, true);
-                                logger.fine(ServerLanguageService.translate(
+                                logger.fine(ServerLanguage.translate(
                                         TranslateKeys.Log.MAP_INITIALIZER_MAP_FINISHED, mapId));
                             },
                             SchedulingUtil::runOnMainThread
@@ -133,7 +133,7 @@ public class MapInitializer implements Module {
                     .exceptionally(throwable -> {
                         logger.log(
                                 Level.SEVERE,
-                                ServerLanguageService.translate(
+                                ServerLanguage.translate(
                                         TranslateKeys.Log.MAP_INITIALIZER_MAP_FAILED, mapId, throwable.getMessage()),
                                 throwable);
                         // 失败时不设置标志，下次重启或手动重试会再次尝试

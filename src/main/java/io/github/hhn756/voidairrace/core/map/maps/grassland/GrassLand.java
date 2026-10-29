@@ -14,6 +14,7 @@ import io.github.hhn756.voidairrace.core.matchrule.RuleComp;
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
 import io.github.hhn756.voidairrace.exception.ArenaException;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.util.schedulingutil.SchedulingUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.BlockRegion;
 import io.github.hhn756.voidairrace.infrastructure.util.world.blockfinder.BlockFinder;
@@ -21,7 +22,6 @@ import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
 import io.github.hhn756.voidairrace.service.arena.ArenaManager;
 import io.github.hhn756.voidairrace.service.arena.ArenaToken;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import io.papermc.paper.event.player.PlayerFailMoveEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -167,7 +167,7 @@ public class GrassLand extends PlayableGameMap implements Listener {
                 String techMessage = enableRuleResult.techMessage();
                 if (techMessage != null) {
                     Voidairrace.getInstance().getLogger()
-                            .warning(ServerLanguageService.translate(
+                            .warning(ServerLanguage.translate(
                                     TranslateKeys.Log.GRASS_LAND_ENABLE_RULE_FAILED, ruleId, techMessage));
                 }
             }

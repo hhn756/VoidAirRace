@@ -3,8 +3,8 @@ package io.github.hhn756.voidairrace.infrastructure.config;
 import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.exception.ConfigException;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -76,10 +76,11 @@ public class Config implements Module {
     }
 
     /**
-     * 将所有已加载的配置文件保存到磁盘（不会删除内存中的数据）<br>
+     * 将所有由插件管理的已加载配置文件保存到磁盘（不会删除内存中的数据）<br>
      * 发生异常时每个文件最多重试3次
      * <p>
-     * 这将遍历插件本次启用中所有已加载过的所有配置文件，对它们调用{@link Config#save(FileConfig, int)}（重试次数为{@code 3}）
+     * 这将遍历插件本次启用中所有已加载过的所有配置文件，对它们调用{@link Config#save(FileConfig, int)}（重试次数为{@code 3}）；
+     * 外部定义（{@link ConfigDefinition#external}）不在其中，其写入方已即时保存
      *
      * @throws ConfigException 如果有任何文件在重试后仍然保存失败
      */
@@ -87,6 +88,7 @@ public class Config implements Module {
         int maxRetries = 3;
         for (Map.Entry<String, FileConfig> entry : configs.entrySet()) {
             FileConfig config = entry.getValue();
+            if (!config.getDefine().managedByPlugin()) continue;
             save(config, maxRetries);
         }
     }
@@ -177,6 +179,16 @@ public class Config implements Module {
     }
 
     /**
+     * 驱逐一个已加载配置文件的内存缓存，不保存其修改<br>
+     * 其后再次获取同一路径的配置会重新从磁盘加载，并使用当时传入的定义对象
+     *
+     * @param filePath 配置文件名/路径（不含扩展名）
+     * */
+    public void evict(@NonNull String filePath) {
+        configs.remove(filePath);
+    }
+
+    /**
      * 内部辅助方法，用于加载一个yml配置文件
      *
      * @param configDefinition 要加载的文件的定义对象
@@ -213,7 +225,7 @@ public class Config implements Module {
      * @param args       翻译文本的格式化参数
      * */
     private void logAndThrow(@NonNull Level logLevel, @NonNull String messageKey, Object... args) throws ConfigException {
-        String msg = ServerLanguageService.translate(messageKey, args);
+        String msg = ServerLanguage.translate(messageKey, args);
         logger.log(logLevel, msg);
         throw new ConfigException(msg, null);
     }
@@ -239,7 +251,7 @@ public class Config implements Module {
         try {
             defaults.save(target);
         } catch (IOException e) {
-            String msg = ServerLanguageService.translate(
+            String msg = ServerLanguage.translate(
                     TranslateKeys.Log.CONFIG_MATERIALIZE_FAILED, target.getAbsolutePath());
             logger.log(Level.SEVERE, msg, e);
             throw new ConfigException(msg, e, null);

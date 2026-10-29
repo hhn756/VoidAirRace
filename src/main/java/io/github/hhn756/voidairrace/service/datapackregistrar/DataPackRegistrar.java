@@ -3,8 +3,8 @@ package io.github.hhn756.voidairrace.service.datapackregistrar;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.ResourcePath;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.BootstrapStage;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.text.Component;
@@ -33,7 +33,7 @@ public class DataPackRegistrar implements BootstrapStage {
                         );
                     } catch (IOException | URISyntaxException | NullPointerException e) {
                         context.getLogger().warn(
-                                Component.text(ServerLanguageService.translate(
+                                Component.text(ServerLanguage.translate(
                                                 TranslateKeys.Log.DATAPACK_REGISTRAR_LOAD_FAILED,
                                                 e.getLocalizedMessage()
                                         ))

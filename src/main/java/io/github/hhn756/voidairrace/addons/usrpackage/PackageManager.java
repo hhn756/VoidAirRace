@@ -8,6 +8,7 @@ import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.Plugin;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.map.MapEntry;
+import io.github.hhn756.voidairrace.core.map.MapInitializer;
 import io.github.hhn756.voidairrace.core.matchrule.RuleEntry;
 import io.github.hhn756.voidairrace.core.matchrule.RuleRegistrar;
 import io.github.hhn756.voidairrace.event.UsrPackageLoadEvent;
@@ -15,13 +16,13 @@ import io.github.hhn756.voidairrace.exception.UsrPackageException;
 import io.github.hhn756.voidairrace.infrastructure.config.Config;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.registry.DefaultSubtable;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
 import io.github.hhn756.voidairrace.result.ItemResult;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.jspecify.annotations.NonNull;
@@ -159,8 +160,10 @@ public class PackageManager implements Module {
     public @NonNull Collection<@NonNull Class<? extends Module>> getRequiredModules() {
         // RuleRegistrar：包脚本注册规则时需要 RULE 类别已创建
         // TagRegistrar：包脚本注册元素（规则的标签引用）时需要 TAG 类别已创建
-        // ServerLanguageService：包扫描与加载结果在加载期就要按配置语言输出日志
-        return List.of(PackageScriptService.class, Config.class, ServerLanguageService.class, RuleRegistrar.class, TagRegistrar.class);
+        // MapInitializer：包脚本注册地图时需要 MAP 类别已创建（该类别由 MapInitializer 定义）
+        // ServerLanguage：包扫描与加载结果在加载期就要按配置语言输出日志
+        return List.of(PackageScriptService.class, Config.class, ServerLanguage.class,
+                RuleRegistrar.class, TagRegistrar.class, MapInitializer.class);
     }
 
     /** 插件启用时执行 */
@@ -258,6 +261,36 @@ public class PackageManager implements Module {
     private PackageManager() {}
 
     /**
+     * 只解析一个包根的元文件，不加载包<br>
+     * 供按包 Id 定位包根、管理员查看包信息使用；可预期失败与{@link #load}的元文件解析阶段同构，
+     * 意外失败（IO 异常）的 cause 为{@link UsrPackageException}
+     *
+     * @param root 待解析的包根
+     *
+     * @return 成功时携带根据元数据构造的包对象（尚未加载、未登记）
+     * */
+    public @NonNull ValueResult<UsrPackage> readMeta(@NonNull PackageRoot root) {
+        if (!Files.isDirectory(root.path())) {
+            return ValueResult.failure(
+                    TranslateKeys.Addons.USR_PACKAGE_DIR_NOT_FOUND,
+                    "无法加载用户包，包目录不存在：" + root.path()
+            );
+        }
+        Path metaPath = root.path().resolve(META_FILE_NAME);
+        if (!Files.isRegularFile(metaPath)) {
+            return ValueResult.failure(
+                    TranslateKeys.Addons.USR_PACKAGE_NOT_A_PACKAGE,
+                    "无法加载用户包，包元文件不存在：" + metaPath
+            );
+        }
+        try {
+            return parseMeta(metaPath, root);
+        } catch (UsrPackageException e) {
+            return ValueResult.failure(null, e.getUserMessage(), e.getMessage(), e);
+        }
+    }
+
+    /**
      * 加载一批用户包：解析全部元文件，按依赖拓扑排序（环拒绝）后逐包执行完整加载<br>
      * 依赖声明指向本轮集合之外的包（包括本轮解析失败的包）时，在加载阶段以“依赖未加载”失败<br>
      * 单个包失败不影响其余包，全部结果逐项返回
@@ -272,27 +305,15 @@ public class PackageManager implements Module {
         // 阶段一：解析元文件（格式错误与 IO 异常只淘汰单个包，不中止整轮）
         List<@NonNull UsrPackage> parsed = new ArrayList<>();
         for (PackageRoot root : roots) {
-            if (!Files.isDirectory(root.path())) {
-                results.add(new PackageLoadResult(root, ValueResult.failure(
-                        TranslateKeys.Addons.USR_PACKAGE_DIR_NOT_FOUND,
-                        "无法加载用户包，包目录不存在：" + root.path()
-                ), null));
-                continue;
-            }
-            Path metaPath = root.path().resolve(META_FILE_NAME);
-            if (!Files.isRegularFile(metaPath)) {
-                results.add(new PackageLoadResult(root, ValueResult.failure(
-                        TranslateKeys.Addons.USR_PACKAGE_NOT_A_PACKAGE,
-                        "无法加载用户包，包元文件不存在：" + metaPath
-                ), null));
-                continue;
-            }
-            try {
-                ValueResult<UsrPackage> parsedOne = parseMeta(metaPath, root);
-                if (parsedOne.hasValue()) parsed.add(parsedOne.value());
-                else results.add(new PackageLoadResult(root, parsedOne, null));
-            } catch (UsrPackageException e) {
-                results.add(new PackageLoadResult(root, null, e));
+            ValueResult<UsrPackage> parsedOne = readMeta(root);
+            if (parsedOne.hasValue()) {
+                parsed.add(parsedOne.value());
+            } else if (parsedOne instanceof ValueResult.Failed<UsrPackage> failed
+                    && failed.cause() instanceof UsrPackageException exception) {
+                // IO 异常属于意外失败，走逐条带堆栈的汇报通道
+                results.add(new PackageLoadResult(root, null, exception));
+            } else {
+                results.add(new PackageLoadResult(root, parsedOne, null));
             }
         }
 
@@ -465,7 +486,7 @@ public class PackageManager implements Module {
             // 驱逐脚本运行时状态：环境表登记与共享函数缓存条目
             scriptService.discard(packageName);
 
-            Voidairrace.getInstance().getLogger().info(ServerLanguageService.translate(
+            Voidairrace.getInstance().getLogger().info(ServerLanguage.translate(
                     TranslateKeys.Log.PACKAGE_MANAGER_UNLOADED,
                     packageName, removed.describe(), mapIds, ruleIds, tagIds));
             return new PackageUnloadResult(packageName, removed, null);

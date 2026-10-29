@@ -13,6 +13,12 @@ public enum PermissionNode {
     /** 玩家管理命令的使用权限 */
     PLAYER_MANAGER_COMMAND("void_air_race.command.player_manager"),
 
+    /** 玩家选择队伍命令的使用权限（默认授予所有玩家） */
+    TEAM_COMMAND("void_air_race.command.team"),
+
+    /** 用户包管理命令的使用权限 */
+    USR_PACKAGE_COMMAND("void_air_race.command.usr_package"),
+
     /** debug命令的使用权限 */
     DEBUG_COMMAND("void_air_race.command.debug");
 

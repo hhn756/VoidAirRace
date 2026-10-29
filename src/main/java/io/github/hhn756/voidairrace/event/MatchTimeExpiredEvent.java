@@ -6,14 +6,17 @@ import org.bukkit.event.HandlerList;
 import org.jspecify.annotations.NonNull;
 
 /**
- * 比赛状态发生变化时触发一次<br>
- * 注：开始和结束不会触发此事件，但有另外的事件类型用于检测开始和结束比赛
+ * 比赛剩余时间归零时触发一次：只从大于 0 变为 0 的那一刻派发，保持 0 不再重复<br>
+ * 外部通过 {@code setRemaining(0)} 把时间直接设为 0 同样触发
  * */
-public class MatchStatusChangedEvent extends Event {
+public class MatchTimeExpiredEvent extends Event {
     /** Bukkit 事件处理器列表 */
     private static final HandlerList HANDLERS = new HandlerList();
 
-    public MatchStatusChangedEvent(Match match) {
+    /** 剩余时间归零的比赛 */
+    private final @NonNull Match match;
+
+    public MatchTimeExpiredEvent(@NonNull Match match) {
         this.match = match;
     }
 
@@ -31,15 +34,10 @@ public class MatchStatusChangedEvent extends Event {
         return HANDLERS;
     }
 
-    /** 发生状态变化的比赛 */
-    private final Match match;
-
     /**
-     * 获取发生状态变化的比赛
-     *
-     * @return 比赛对象
+     * @return 剩余时间归零的比赛
      * */
-    public Match getMatch() {
+    public @NonNull Match getMatch() {
         return match;
     }
 }

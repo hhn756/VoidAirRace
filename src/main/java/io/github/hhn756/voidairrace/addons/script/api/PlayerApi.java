@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script.api;
 
-import io.github.hhn756.voidairrace.addons.script.api.handle.MatchHandle;
+import io.github.hhn756.voidairrace.addons.script.api.match.MatchHandle;
 import io.github.hhn756.voidairrace.addons.script.simplevalue.Position;
 import io.github.hhn756.voidairrace.core.playerstatemanager.PlayerStateManager;
 import io.github.hhn756.voidairrace.core.playerstatemanager.systems.StateSystem;

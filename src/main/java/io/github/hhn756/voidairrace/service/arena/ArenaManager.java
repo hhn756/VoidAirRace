@@ -9,12 +9,12 @@ import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GlobalSettingKey;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.infrastructure.modules.Module;
 import io.github.hhn756.voidairrace.infrastructure.util.JarEntryUtil;
 import io.github.hhn756.voidairrace.infrastructure.util.world.WorldCreatorUtil;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -66,7 +66,7 @@ public class ArenaManager implements Module {
         this.maxArenas = gameSettings.get(GameSettingKey.MAX_ARENAS, 16);
         if (maxArenas < 1) {
             mainClass.getLogger().warning(
-                    ServerLanguageService.translate(TranslateKeys.Log.ARENA_MAX_ARENAS_INVALID));
+                    ServerLanguage.translate(TranslateKeys.Log.ARENA_MAX_ARENAS_INVALID));
             maxArenas = 1;
         }
 
@@ -335,6 +335,36 @@ public class ArenaManager implements Module {
     }
 
     /**
+     * 判断一个世界是否为竞技场世界<br>
+     * 按命名模式判断（{@link #ARENA_WORLD_DIR_NAME}）：世界对象在竞技场世界加载期间、
+     * 卸载之前都算竞技场世界，不受状态表中已加载世界字段的更新时机影响
+     *
+     * @param world 待判断的世界
+     *
+     * @return 是竞技场世界时为{@code true}
+     * */
+    public boolean isArenaWorld(@NonNull World world) {
+        return ARENA_WORLD_DIR_NAME.matcher(world.getName()).matches();
+    }
+
+    /**
+     * 查询一个竞技场世界当前登记的借入者
+     *
+     * @param world 待查询的世界
+     *
+     * @return 借入者标识（用户包 Id 或内置地图名）；不是竞技场世界、世界未登记在
+     *         任何竞技场状态上或竞技场未借出时返回{@code null}
+     * */
+    public @Nullable String borrowerOfWorld(@NonNull World world) {
+        if (!isArenaWorld(world)) return null;
+        for (Integer id = 1; id <= maxArenas; id++) {
+            ArenaState state = arenaState(id);
+            if (state.getLoadedWorld() == world) return state.getBorrower();
+        }
+        return null;
+    }
+
+    /**
      * 获取最大竞技场数量
      * */
     public @NonNull Integer getMaxArenas() {
@@ -413,7 +443,7 @@ public class ArenaManager implements Module {
 
         // 冲突检查：目录在归还/卸载时已删除，仍存在即残留或同名无关目录，拒绝覆盖
         if (Files.exists(worldDir)) {
-            String techDetail = ServerLanguageService.translate(
+            String techDetail = ServerLanguage.translate(
                     TranslateKeys.Log.ARENA_WORLD_DIR_CONFLICT, worldDir.toAbsolutePath());
             Voidairrace.getInstance().getLogger().warning(techDetail);
             throw new ArenaException(techDetail,
@@ -462,7 +492,7 @@ public class ArenaManager implements Module {
 
         // 竞技场世界目录缺失说明模板未复制，拒绝凭空创建空世界
         if (!Files.isDirectory(worldDir)) {
-            String techDetail = ServerLanguageService.translate(
+            String techDetail = ServerLanguage.translate(
                     TranslateKeys.Log.ARENA_WORLD_DIR_MISSING, worldDir.toAbsolutePath());
             Voidairrace.getInstance().getLogger().warning(techDetail);
             throw new ArenaException(techDetail,
@@ -501,7 +531,7 @@ public class ArenaManager implements Module {
         // 卸载世界（不保存）；卸载成功才删除目录，避免删除仍在使用中的世界目录
         boolean unloaded = Boolean.TRUE.equals(Bukkit.unloadWorld(world, false));
         if (!unloaded) {
-            Voidairrace.getInstance().getLogger().severe(ServerLanguageService.translate(
+            Voidairrace.getInstance().getLogger().severe(ServerLanguage.translate(
                     TranslateKeys.Log.ARENA_UNLOAD_FAILED, arenaIdToWorldName(arenaId)));
             return;
         }
@@ -548,7 +578,7 @@ public class ArenaManager implements Module {
             try {
                 tipFile.createNewFile();
             } catch (IOException e) {
-                mainClass.getLogger().warning(ServerLanguageService.translate(
+                mainClass.getLogger().warning(ServerLanguage.translate(
                         TranslateKeys.Log.ARENA_TIP_FILE_CREATE_FAILED, targetDir, tipText, e.getMessage()));
             }
         }
@@ -563,7 +593,7 @@ public class ArenaManager implements Module {
      * */
     private static void deleteWorldDirectory(@NonNull Path dir) {
         if (!ARENA_WORLD_DIR_NAME.matcher(dir.getFileName().toString()).matches()) {
-            Voidairrace.getInstance().getLogger().severe(ServerLanguageService.translate(
+            Voidairrace.getInstance().getLogger().severe(ServerLanguage.translate(
                     TranslateKeys.Log.ARENA_DELETE_DIR_NAME_MISMATCH, dir.toAbsolutePath()));
             return;
         }
@@ -573,13 +603,13 @@ public class ArenaManager implements Module {
                     Files.delete(path);
                 } catch (IOException e) {
                     Voidairrace.getInstance().getLogger().log(
-                            Level.SEVERE, ServerLanguageService.translate(
+                            Level.SEVERE, ServerLanguage.translate(
                                     TranslateKeys.Log.ARENA_DELETE_FILE_FAILED, path.toAbsolutePath()), e);
                 }
             });
         } catch (IOException e) {
             Voidairrace.getInstance().getLogger().log(
-                    Level.SEVERE, ServerLanguageService.translate(
+                    Level.SEVERE, ServerLanguage.translate(
                             TranslateKeys.Log.ARENA_WALK_DIR_FAILED, dir.toAbsolutePath()), e);
         }
     }

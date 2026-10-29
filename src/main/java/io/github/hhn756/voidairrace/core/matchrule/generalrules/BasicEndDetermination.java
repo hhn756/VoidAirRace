@@ -6,9 +6,10 @@ import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.match.MatchCoordinator;
 import io.github.hhn756.voidairrace.core.match.component.contestant.ContestantComp;
-import io.github.hhn756.voidairrace.core.match.component.gametime.GameTimeComp;
 import io.github.hhn756.voidairrace.core.matchrule.MatchRule;
-import io.github.hhn756.voidairrace.event.MatchStatusChangedEvent;
+import io.github.hhn756.voidairrace.event.MatchTimeExpiredEvent;
+import io.github.hhn756.voidairrace.event.PlayerJoinMatchEvent;
+import io.github.hhn756.voidairrace.event.PlayerLeaveMatchEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.EventHandler;
@@ -38,16 +39,27 @@ public class BasicEndDetermination implements MatchRule, Listener {
     );
 
     @EventHandler
-    public void onMatchStatusChanged(MatchStatusChangedEvent event) {
-        Match match = event.getMatch();
-        // 只剩一队 <- 这个优先检测，应对时间归零同刻击败玩家
+    public void onPlayerJoinMatch(@NonNull PlayerJoinMatchEvent event) {
+        checkSurvivingTeams(event.getMatch());
+    }
+
+    @EventHandler
+    public void onPlayerLeaveMatch(@NonNull PlayerLeaveMatchEvent event) {
+        checkSurvivingTeams(event.getMatch());
+    }
+
+    @EventHandler
+    public void onMatchTimeExpired(@NonNull MatchTimeExpiredEvent event) {
+        // 时间归零：比赛结束
+        MatchCoordinator.getInstance().stopMatch();
+    }
+
+    /**
+     * 参赛者变化后检查存活队伍数：只剩一队即结束比赛
+     * */
+    private void checkSurvivingTeams(@NonNull Match match) {
         if (match.comp(ContestantComp.class).survivingTeamCount() <= 1) {
             MatchCoordinator.getInstance().stopMatch();
-        }
-        // 时间归零
-        if (match.comp(GameTimeComp.class).getRemaining() <= 0) {
-            MatchCoordinator.getInstance().stopMatch();
-            return;
         }
     }
 

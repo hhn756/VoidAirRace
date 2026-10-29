@@ -1,6 +1,8 @@
-package io.github.hhn756.voidairrace.addons.script.api.handle;
+package io.github.hhn756.voidairrace.addons.script.api.match;
 
 import io.github.hhn756.voidairrace.addons.script.MutationAccess;
+import io.github.hhn756.voidairrace.addons.script.api.HandleApi;
+import io.github.hhn756.voidairrace.addons.script.api.arena.ArenaHandle;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.Categories;
 import io.github.hhn756.voidairrace.constants.Plugin;
@@ -49,9 +51,8 @@ import java.util.UUID;
  * 启用比赛规则、登记比赛区域、查比赛状态与存活/排行情况、结束比赛、读写比赛时间。
  * 比赛结束后调用即抛 Lua 错误（对已卸载组件操作属未定义行为，必须抛错）；
  * 收尾回调（如地图 {@code on_over}）经{@link HandleApi#forEndingMatch}构造，
- * 只放行查询类函数。其余操作见包环境的插件全局表
- * （{@code server.broadcast / player.position / player.team_of / arena.borrow /
- * event.on / event.off}）
+ * 只放行查询类函数；事件回调经{@link HandleApi#forEvent}构造，本包不是比赛归属方时
+ * 得到只读句柄。其余操作见包环境的插件全局表
  * */
 public final class MatchHandle {
     /** 所属比赛（薄门面无分离语义：比赛结束即整个句柄失去意义，每次回调现造） */
@@ -66,6 +67,11 @@ public final class MatchHandle {
      * 组件可能正在逐个卸载，只允许读取不依赖组件生命周期的状态
      * */
     private final boolean allowEnding;
+    /**
+     * 是否只读：当前包对本场比赛没有修改权（事件回调发给非归属包时）<br>
+     * 只读句柄的操作类函数一律抛 Lua 错误，查询类不受影响
+     * */
+    private final boolean readOnly;
     /** 本比赛的句柄表 */
     private final @NonNull Table table;
 
@@ -73,12 +79,14 @@ public final class MatchHandle {
             @NonNull StateContext stateContext,
             @NonNull Match match,
             @NonNull UsrPackage callerPackage,
-            boolean allowEnding
+            boolean allowEnding,
+            boolean readOnly
     ) {
         this.match = match;
         this.stateContext = stateContext;
         this.callerPackage = callerPackage;
         this.allowEnding = allowEnding;
+        this.readOnly = readOnly;
         this.table = stateContext.newTable();
         this.table.rawset(ByteString.of("state"), new State(this));
         this.table.rawset(ByteString.of("contestants"), new Contestants(this));
@@ -105,6 +113,7 @@ public final class MatchHandle {
      * @param match         目标比赛
      * @param callerPackage 句柄所属地图的发起包
      * @param allowEnding   是否放行收尾阶段（{@code ENDING}）的查询
+     * @param readOnly      是否只读（当前包对本场比赛没有修改权）
      *
      * @return 该比赛的句柄表
      * */
@@ -112,33 +121,48 @@ public final class MatchHandle {
             @NonNull StateContext stateContext,
             @NonNull Match match,
             @NonNull UsrPackage callerPackage,
-            boolean allowEnding
+            boolean allowEnding,
+            boolean readOnly
     ) {
-        return new MatchHandle(stateContext, match, callerPackage, allowEnding).table;
+        return new MatchHandle(stateContext, match, callerPackage, allowEnding, readOnly).table;
     }
 
     /**
-     * 取回所属比赛，比赛不在进行中（且未放行收尾阶段）即抛 Lua 错误<br>
-     * 查询类函数的前置检查：只读取不依赖组件生命周期的状态
+     * 取回所属比赛，比赛不在可访问阶段（且未放行收尾阶段）即抛 Lua 错误<br>
+     * 查询类函数的前置检查：比赛处于启动（地图回调 on_start 所在的组件安装阶段）或进行中都可读
      * */
     private @NonNull Match requireMatch() {
         MatchState state = match.state();
-        if (state != MatchState.IN_PROGRESS && !(allowEnding && state == MatchState.ENDING)) {
+        if (state != MatchState.IN_PROGRESS
+                && state != MatchState.STARTING
+                && !(allowEnding && state == MatchState.ENDING)
+        ) {
             throw new LuaRuntimeException("比赛已结束，比赛句柄不可用");
         }
         return match;
     }
 
     /**
-     * 取回所属比赛，比赛必须处于进行中，否则抛 Lua 错误<br>
-     * 操作类函数的前置检查：比赛进入结束流程后组件可能正在卸载，
-     * 对组件的任何写操作都属于未定义行为
+     * 取回所属比赛，比赛必须处于启动或进行中，否则抛 Lua 错误<br>
+     * 操作类函数的前置检查：地图 on_start 在所有组件安装完成后执行（状态仍为启动），
+     * 此时组件已就绪，允许执行启用规则、登记区域等开局操作；进入结束流程后一律拒绝
      * */
     private @NonNull Match requireActiveMatch() {
-        if (match.state() != MatchState.IN_PROGRESS) {
+        MatchState state = match.state();
+        if (state != MatchState.IN_PROGRESS && state != MatchState.STARTING) {
             throw new LuaRuntimeException("比赛已结束，比赛句柄不可用");
         }
         return match;
+    }
+
+    /**
+     * 操作类函数的前置检查：只读句柄一律拒绝<br>
+     * 只读句柄只会出现在事件回调中（本包对本场没有修改权时），地图与规则回调收到的是完整句柄
+     * */
+    private void requireWritable() {
+        if (readOnly) {
+            throw new LuaRuntimeException("本场比赛不属于当前包，事件回调中的比赛句柄只能查询");
+        }
     }
 
     /**
@@ -414,6 +438,7 @@ public final class MatchHandle {
 
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
+            handle.requireWritable();
             Match match = handle.requireActiveMatch();
             Player player = findPlayer(arg1, "handle.join：第 1 个参数（玩家 UUID）");
             ContestantComp comp = match.comp(ContestantComp.class);
@@ -453,6 +478,7 @@ public final class MatchHandle {
 
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
+            handle.requireWritable();
             Match match = handle.requireActiveMatch();
             Player player = findPlayer(arg1, "handle.leave：第 1 个参数（玩家 UUID）");
             match.comp(ContestantComp.class).leaveMatch(player);
@@ -480,6 +506,7 @@ public final class MatchHandle {
 
         @Override
         public void invoke(@NonNull ExecutionContext context) {
+            handle.requireWritable();
             Match match = handle.requireActiveMatch();
             MatchCoordinator coordinator = MatchCoordinator.getInstance();
             if (coordinator.getCurrentMatch() != match) {
@@ -535,6 +562,7 @@ public final class MatchHandle {
 
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
+            handle.requireWritable();
             Match match = handle.requireActiveMatch();
             int n = (int) expectNonNegativeInt(arg1, "handle.set_remaining：第 1 个参数（剩余 tick）");
             match.comp(GameTimeComp.class).setRemaining(n);
@@ -583,6 +611,7 @@ public final class MatchHandle {
 
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
+            handle.requireWritable();
             Match match = handle.requireActiveMatch();
             boolean flag = expectBoolean(arg1, "handle.set_time_flow：第 1 个参数（是否流动）");
             match.comp(GameTimeComp.class).setTimeFlow(flag);
@@ -610,6 +639,7 @@ public final class MatchHandle {
 
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1, @Nullable Object arg2) {
+            handle.requireWritable();
             Match match = handle.requireActiveMatch();
             if (!(arg1 instanceof Table arenaTable)) {
                 throw new LuaRuntimeException("handle.widen：第 1 个参数必须是竞技场句柄表");
@@ -656,6 +686,7 @@ public final class MatchHandle {
 
         @Override
         public void invoke(@NonNull ExecutionContext context, @Nullable Object arg1) {
+            handle.requireWritable();
             Match match = handle.requireActiveMatch();
             String spec = ApiArgs.expectString(arg1, "handle.enable_rule：第 1 个参数（规则 Id）");
 

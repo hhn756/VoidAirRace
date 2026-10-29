@@ -8,11 +8,9 @@ import io.github.hhn756.voidairrace.core.playerstatemanager.systems.play.PlaySta
 import io.github.hhn756.voidairrace.core.team.TeamRoster;
 import io.github.hhn756.voidairrace.core.team.Teams;
 import io.github.hhn756.voidairrace.event.ConfigFieldChangeEvent;
-import io.github.hhn756.voidairrace.event.MatchOverEvent;
-import io.github.hhn756.voidairrace.event.MatchStartedEvent;
 import io.github.hhn756.voidairrace.infrastructure.config.file.GameSettingKey;
+import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
 import io.github.hhn756.voidairrace.infrastructure.registry.Registry;
-import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
@@ -21,50 +19,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.BoundingBox;
-
-import java.util.Map;
 
 public class EventListener implements Listener {
-
-    @EventHandler
-    public void onMatchStarted(MatchStartedEvent event) {
-        State.matchRunning = true;
-    }
-
-    @EventHandler
-    public void onMatchOver(MatchOverEvent event) {
-        State.matchRunning = false;
-    }
-
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        if (State.matchRunning) return;
-
-        Player player = event.getPlayer();
-        TeamRoster teamRoster = TeamRoster.getInstance();
-
-        // 将玩家加入队伍区域对应的队伍
-        boolean isBreak = false;
-        for (Map.Entry<BoundingBox, TeamArea> i: Data.regionToTeam.entrySet()) {
-            BoundingBox region = i.getKey();
-            TeamArea area = i.getValue();
-            Location location = player.getLocation();
-            if (region.contains(location.x(), location.y(), location.z())
-                    && area.id() <= State.activeTeamArea) {
-                teamRoster.join(player, area.team());
-                isBreak = true;
-                break;
-            }
-        }
-        if (!isBreak
-                && teamRoster.getTeam(player) != null) {
-            teamRoster.leave(player);
-        }
-    }
 
     @EventHandler
     public void onPlayerOpenContainer(InventoryOpenEvent event) {
@@ -78,7 +36,8 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onConfigChange(ConfigFieldChangeEvent event) {
-        if (event.getPath().equals(GameSettingKey.SELECTED_MAP_ID.path())) {
+        if (event.getFile().filePath().equals(PublicFile.GLOBAL_SETTING.filePath())
+                && event.getPath().equals(GameSettingKey.SELECTED_MAP_ID.path())) {
             NamespacedKey newMapId;
             Registry registry = Registry.getInstance();
             String rawMapId = event.getNewValue(GameSettingKey.SELECTED_MAP_ID);

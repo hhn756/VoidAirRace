@@ -1,7 +1,6 @@
-package io.github.hhn756.voidairrace.addons.script.api;
+package io.github.hhn756.voidairrace.addons.script.api.arena;
 
 import io.github.hhn756.voidairrace.Voidairrace;
-import io.github.hhn756.voidairrace.addons.script.api.handle.ArenaHandle;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.event.UsrPackageUnloadEvent;
 import io.github.hhn756.voidairrace.result.ValueResult;

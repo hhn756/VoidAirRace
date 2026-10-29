@@ -3,15 +3,15 @@ package io.github.hhn756.voidairrace.addons.script.api.register;
 import io.github.hhn756.voidairrace.Voidairrace;
 import io.github.hhn756.voidairrace.addons.GameElementMeta;
 import io.github.hhn756.voidairrace.addons.script.ScriptCallGate;
-import io.github.hhn756.voidairrace.addons.script.api.handle.HandleApi;
+import io.github.hhn756.voidairrace.addons.script.api.HandleApi;
 import io.github.hhn756.voidairrace.addons.usrpackage.UsrPackage;
 import io.github.hhn756.voidairrace.constants.TranslateKeys;
 import io.github.hhn756.voidairrace.core.match.Match;
 import io.github.hhn756.voidairrace.core.matchrule.MatchRule;
 import io.github.hhn756.voidairrace.core.matchrule.RuleEntry;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.StateContext;
 import net.sandius.rembulan.load.ChunkClassLoader;
@@ -177,7 +177,7 @@ public final class LuaRule implements MatchRule {
                 stateContext, chunkClassLoader, fn, HandleApi.forMatch(stateContext, match, source));
         if (!result.hasValue()) {
             Voidairrace.getInstance().getLogger().warning(
-                    ServerLanguageService.translate(
+                    ServerLanguage.translate(
                             TranslateKeys.Log.LUA_RULE_CALLBACK_FAILED, what, owner, result.techMessage())
             );
         }

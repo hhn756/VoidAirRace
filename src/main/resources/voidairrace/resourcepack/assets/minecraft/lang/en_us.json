@@ -97,6 +97,16 @@
   "void_air_race.command.match_cmd.set_map.success": "Match map set to %s (%s)",
   "void_air_race.command.match_cmd.get_map.success": "The current match map is %s (%s)",
 
+  "void_air_race.command.team.player_only": "Only players can use this command",
+  "void_air_race.command.team.not_free": "You are not free right now and cannot choose a team",
+  "void_air_race.command.team.not_in_lobby": "You must be in the lobby to choose a team",
+  "void_air_race.command.team.no_available_teams": "The current map has no teams to choose",
+  "void_air_race.command.team.unknown": "Unknown team: %s (available: %s)",
+  "void_air_race.command.team.current.none": "You are not in any team",
+  "void_air_race.command.team.current.team": "Current team: %s",
+  "void_air_race.command.team.join.success": "Joined team %s",
+  "void_air_race.command.team.leave.success": "Left your team",
+
   "void_air_race.command.game_map.reinit.id_format_error": "Invalid map ID format",
   "void_air_race.command.match_cmd.set_map.id_format_error": "Invalid map ID format",
   "void_air_race.command.match_cmd.get_map.default_map_name": "Grassland",
@@ -106,6 +116,31 @@
   "void_air_race.command.player_manager.init.get.no": "Player %s is not initialized",
   "void_air_race.command.player_manager.init.reinit.null_player": "No player named %s was found",
   "void_air_race.command.player_manager.init.reinit.ok": "Player %s has been reinitialized",
+
+  "void_air_race.command.usr_package.list.start": "=== User Package List ===",
+  "void_air_race.command.usr_package.list.entry_loaded": "[Loaded] %s (%s)",
+  "void_air_race.command.usr_package.list.entry_unloaded": "[Unloaded] %s (%s)",
+  "void_air_race.command.usr_package.list.entry_unidentified": "[Unreadable metadata] %s",
+  "void_air_race.command.usr_package.list.empty": "(No matching user packages)",
+  "void_air_race.command.usr_package.list.end": "=== End of List ===",
+
+  "void_air_race.command.usr_package.elements.start": "=== Game elements registered by user package %s ===",
+  "void_air_race.command.usr_package.elements.entry": "[%s] %s (ID: %s)",
+  "void_air_race.command.usr_package.elements.empty": "(No matching elements)",
+  "void_air_race.command.usr_package.elements.end": "=== End of List ===",
+  "void_air_race.command.usr_package.elements.package_not_loaded": "User package %s is not loaded, so its registered elements cannot be listed",
+  "void_air_race.command.usr_package.elements.unknown_type": "Unknown element type %s (available types: %s)",
+
+  "void_air_race.command.usr_package.enable.already_loaded": "User package %s is already loaded",
+  "void_air_race.command.usr_package.enable.package_not_found": "No user package with ID %s was found in the package directory",
+  "void_air_race.command.usr_package.enable.config_save_failed": "Failed to write the user package enable list; user package %s was not enabled",
+  "void_air_race.command.usr_package.enable.failed": "Failed to enable user package %s",
+  "void_air_race.command.usr_package.enable.success": "Enabled user package %s",
+
+  "void_air_race.command.usr_package.disable.not_enabled": "User package %s is neither enabled nor loaded",
+  "void_air_race.command.usr_package.disable.config_save_failed": "Failed to write the user package enable list; user package %s was not disabled",
+  "void_air_race.command.usr_package.disable.failed": "Failed to disable user package %s",
+  "void_air_race.command.usr_package.disable.success": "Disabled user package %s",
 
   "void_air_race.audio_visual_services.game_time_bossbar.bossbar_name": "Time left: %s s",
   "void_air_race.audio_visual_services.login_message.line1": "%s joined the game",
@@ -190,6 +225,10 @@
   "void_air_race.log.config.fill_missing_failed": "Failed to save or reload config file '%s' after filling in missing fields",
   "void_air_race.log.config.materialize_failed": "Failed to generate the default config file '%s' from config key definitions",
 
+  "void_air_race.log.package_config.load_failed": "Failed to load user package config \"%s\"",
+  "void_air_race.log.package_config.save_failed": "Failed to save user package config \"%s\"",
+  "void_air_race.log.package_config.delete_failed": "Failed to delete user package config file \"%s\"",
+
   "void_air_race.log.class_scanner.scan_failed": "Failed to scan plugin classes",
   "void_air_race.log.class_scanner.index_class_unloadable": "Failed to load class %s from the subclass index: %s",
   "void_air_race.log.class_scanner.runtime_scan_failed": "Failed to scan classes at runtime",
@@ -261,6 +300,7 @@
   "void_air_race.log.arena_handle.cleanup_return_failed": "Failed to return the arena during package cleanup: %s",
   "void_air_race.log.event_api.callback_failed": "Event callback of package %s failed (event %s): %s",
   "void_air_race.log.lua_map.on_over_failed": "User map on_over call failed: %s (%s)",
+  "void_air_race.log.lua_map.on_tick_failed": "User map on_tick call failed: %s (%s)",
   "void_air_race.log.lua_rule.callback_failed": "User rule %s callback failed: %s (%s)",
   "void_air_race.log.register_api.map_registered": "User package %s registered map: %s",
   "void_air_race.log.register_api.rule_registered": "User package %s registered match rule: %s",
@@ -268,5 +308,8 @@
   "void_air_race.log.package_manager.unloaded": "Unloaded user package %s (source: %s): unregistered maps %s, rules %s, tags %s",
   "void_air_race.log.script.output": "[User package script] %s",
   "void_air_race.log.command.match_start_failed": "Failed to start the match: %s",
-  "void_air_race.log.command.match_stop_failed": "Failed to stop the match: %s"
+  "void_air_race.log.command.match_stop_failed": "Failed to stop the match: %s",
+  "void_air_race.log.command.usr_package_load_failed": "Failed to enable user package %s: %s",
+  "void_air_race.log.command.usr_package_unload_failed": "Failed to disable user package %s: %s",
+  "void_air_race.log.command.usr_package_config_save_failed": "Failed to write the user package enable list: %s"
 }

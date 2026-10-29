@@ -1,6 +1,6 @@
 package io.github.hhn756.voidairrace.addons.script.api;
 
-import io.github.hhn756.voidairrace.addons.script.TextComponents;
+import io.github.hhn756.voidairrace.addons.script.simplevalue.TextComponents;
 import net.kyori.adventure.text.Component;
 import net.sandius.rembulan.ByteString;
 import net.sandius.rembulan.StateContext;

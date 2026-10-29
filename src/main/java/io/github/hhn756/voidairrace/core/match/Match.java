@@ -10,9 +10,9 @@ import io.github.hhn756.voidairrace.infrastructure.config.ConfigDefinition;
 import io.github.hhn756.voidairrace.infrastructure.config.ConfigKey;
 import io.github.hhn756.voidairrace.infrastructure.config.YamlConfig;
 import io.github.hhn756.voidairrace.infrastructure.config.file.PublicFile;
+import io.github.hhn756.voidairrace.infrastructure.language.ServerLanguage;
 import io.github.hhn756.voidairrace.result.OperationResult;
 import io.github.hhn756.voidairrace.result.ValueResult;
-import io.github.hhn756.voidairrace.service.language.ServerLanguageService;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -284,7 +284,7 @@ public class Match {
                 if (startableComp instanceof MatchComp matchComp) {
                     // 记录日志，继续执行
                     Voidairrace.getInstance().getLogger().warning(
-                            ServerLanguageService.translate(
+                            ServerLanguage.translate(
                                     TranslateKeys.Log.MATCH_ROLLBACK_UNINSTALL_FAILED,
                                     matchComp.getMeta().names(),
                                     e.getMessage()));
@@ -366,14 +366,14 @@ public class Match {
             if (!result.isSuccess()) {
                 // 技术性消息只进日志（用户通道在此处没有发送对象）
                 logger.warning(
-                        ServerLanguageService.translate(
+                        ServerLanguage.translate(
                                 TranslateKeys.Log.MATCH_UNINSTALL_FAILED,
                                 compName,
                                 result.techMessage()));
             }
         } catch (Exception e) {
             logger.warning(
-                    ServerLanguageService.translate(
+                    ServerLanguage.translate(
                             TranslateKeys.Log.MATCH_UNINSTALL_EXCEPTION,
                             compName,
                             e.getMessage()));
